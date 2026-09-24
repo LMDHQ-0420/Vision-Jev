@@ -9,7 +9,6 @@ import shutil
 import sys
 from pathlib import Path
 
-from vision_jev import __version__
 from vision_jev.data import DataValidationError, validate_jsonl
 from vision_jev.data.build import build_public_manifest
 from vision_jev.data.download import (
@@ -41,11 +40,7 @@ def doctor(_: argparse.Namespace) -> int:
         "expected_training_environment": "vision-jev",
         "active_conda_environment": os.environ.get("CONDA_DEFAULT_ENV"),
     }
-    print(
-        json.dumps(
-            {"version": __version__, "checks": checks, "environment": environment_note}, indent=2
-        )
-    )
+    print(json.dumps({"checks": checks, "environment": environment_note}, indent=2))
     return 0 if all(checks.values()) else 1
 
 
@@ -186,7 +181,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     gui_parser.add_argument("--data-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev"))
     gui_parser.add_argument("--target-rows", type=int, default=8500)
-    gui_parser.add_argument("--seed", default="vision-jev-sft-v2.3")
+    gui_parser.add_argument("--seed", default="vision-jev-sft")
     gui_parser.set_defaults(func=data_download_gui_odyssey_subset)
     normalize_parser = sub.add_parser("data-normalize", help="convert raw data to canonical JSONL")
     normalize_parser.add_argument("source", choices=sorted(ADAPTERS))
@@ -205,9 +200,9 @@ def build_parser() -> argparse.ArgumentParser:
     build_parser.add_argument(
         "--output",
         type=Path,
-        default=Path("/mnt/sda1/sol_data/vision-jev/manifests/public-117k-v2.3.jsonl"),
+        default=Path("/mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl"),
     )
-    build_parser.add_argument("--seed", default="vision-jev-sft-v2")
+    build_parser.add_argument("--seed", default="vision-jev-sft")
     build_parser.set_defaults(func=data_build_public)
     return parser
 

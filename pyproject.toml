@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vision-jev"
-version = "0.1.0.dev0"
+version = "0.1.0"
 description = "Open visual dynamic-candidate decision model and reproducible training tutorial"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,7 +22,7 @@ train = [
   "pillow>=11",
   "numpy>=2.0",
 ]
-rl = ["gymnasium>=1.2", "minigrid>=3.0", "miniwob==1.1.0"]
+rl = ["gymnasium>=1.2", "minigrid>=3.0"]
 data = [
   "datasets>=4.0",
   "pillow>=11",

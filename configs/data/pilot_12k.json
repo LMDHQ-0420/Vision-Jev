@@ -1,13 +1,13 @@
 {
   "schema_version": 2,
-  "mixture_id": "pilot-12k-v2.3",
+  "mixture_id": "pilot-12k",
   "unit": "complete_question",
   "total_questions": 12000,
   "source_scale": 0.1,
   "group_split": true,
-  "parent_mixture": "sft-120k-v2.3",
+  "parent_mixture": "sft-120k",
   "teacher_only_questions": 0,
   "candidate_k_primary": [2, 8],
   "candidate_k_extended": [16, 32],
-  "manifest": "data/manifests/pilot-12k-v2.3.jsonl"
+  "manifest": "data/manifests/pilot-12k.jsonl"
 }

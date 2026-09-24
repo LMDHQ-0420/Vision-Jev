@@ -261,7 +261,7 @@ def inventory(data_root: Path) -> dict[str, Any]:
 
 
 def materialize_gui_odyssey_subset(
-    data_root: Path, *, target_rows: int = 8500, seed: str = "vision-jev-sft-v2.3"
+    data_root: Path, *, target_rows: int = 8500, seed: str = "vision-jev-sft"
 ) -> dict[str, Any]:
     """Select train steps first, then fetch only their source screenshots."""
     from huggingface_hub import hf_hub_download, list_repo_tree

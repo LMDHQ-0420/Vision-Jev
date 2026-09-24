@@ -30,12 +30,12 @@ vision-jev data-download-gui-odyssey-subset --target-rows 8500
 vision-jev data-inventory
 vision-jev data-normalize multimodal_mind2web
 vision-jev data-build-public --mixture configs/data/sft_120k.json \
-  --output /mnt/sda1/sol_data/vision-jev/manifests/public-117k-v2.3.jsonl
+  --output /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl
 ```
 
 `data-build-public` 按固定 seed 和 `sample_id` 哈希排序，从每个 canonical train 池取得精确配额；实现使用按配额有界的 streaming heap，不把百万级来源整体载入内存。任一来源不足即写 `*.build-report.json` 并失败，不产出主 manifest；成功时记录最终 manifest SHA-256、题型和语言实测分布。
 
-v2.3 不提供活动的本地数据生成入口。历史 `local-27k` 与 MiniWoB pilot 保留在数据盘和迭代记录中用于追溯，但明确排除在正式 canonical pool、manifest 和训练之外。新增 27k 必须来自已登记的公开数据集，只允许自动下载、格式转换、过滤、去重和抽样。
+正式管线不提供本地数据生成入口。停用的本地生成与 MiniWoB 数据已经清理；历史结论只保留在迭代文档中。新增 27k 必须来自已登记的公开数据集，只允许自动下载、格式转换、过滤、去重和抽样。
 
 ## v2 来源门禁
 

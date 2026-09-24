@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "mixture_id": "sft-120k-v2.3",
+  "mixture_id": "sft-120k",
   "unit": "complete_question",
   "total_questions": 120000,
   "blocks": {
@@ -48,5 +48,5 @@
   "choice_k_distribution": {"2-4": 0.55, "5-8": 0.30, "9-16": 0.10, "17-32": 0.05},
   "teacher_only_questions": 0,
   "group_split": true,
-  "manifest": "data/manifests/sft-120k-v2.3.jsonl"
+  "manifest": "data/manifests/sft-120k.jsonl"
 }

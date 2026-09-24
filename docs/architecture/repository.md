@@ -22,7 +22,6 @@ src/vision_jev/
   eval/                   指标、校准、profile
 tests/                    unit/integration/gpu/model 分层测试
 runs/                     每次运行的不可变证据（大文件外置）
-artifacts/                本地生成报告；不作为唯一事实来源
 ```
 
 依赖方向保持 `data/model → runtime/train/eval`，训练代码不能反向改变数据真值或评测 split。`docs/experiments` 解释为什么变化，`runs` 证明实际发生了什么，二者不可互相替代。

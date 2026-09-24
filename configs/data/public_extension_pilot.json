@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "mixture_id": "public-extension-pilot-v2.3",
+  "mixture_id": "public-extension-pilot",
   "unit": "complete_question",
   "total_questions": 1964,
   "public_source_quotas": {
@@ -19,5 +19,5 @@
   },
   "group_split": true,
   "teacher_only_questions": 0,
-  "manifest": "data/manifests/public-extension-pilot-v2.3.jsonl"
+  "manifest": "data/manifests/public-extension-pilot.jsonl"
 }

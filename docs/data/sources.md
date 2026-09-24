@@ -1,4 +1,4 @@
-# 数据来源账本（方案 v2.3）
+# 数据来源账本
 
 本表记录清洗后训练目标，不把计划数写成已构建统计。机器可读下载入口、固定 revision 与许可状态见 `configs/data/sources.json`；实际完成状态只认数据盘中的 `_state/downloads/*.json`。
 
@@ -20,7 +20,7 @@
 | NLVR | 3,000 | 原始 NLVR true/false；六个图像排列保持同组 | CC-BY-4.0 |
 | KonIQ-10k | 6,000 | 原始 c1-c5/MOS 保留；train MOS 五等分位映射五级序数 Score | 研究用途；再发布需复核 |
 
-公开来源合计 117,000。SST 已从主训练移除；已下载快照仅为来源追溯，不进入 v2.3 manifest。旧 local-27k/MiniWoB pilot 也只保留追溯，不进入训练。剩余 3,000 为 API 同语言改写，细分见 `docs/data/mixtures.md`。
+公开来源合计 117,000。停用来源和本地生成数据不保留在活动数据目录中。剩余 3,000 为 API 同语言改写，细分见 `docs/data/mixtures.md`。
 
 ## 下载状态口径
 

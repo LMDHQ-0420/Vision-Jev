@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "plan": "VisJev_Data_Plan_v2.3-public-extension",
+  "plan": "Vision-Jev public-data training plan",
   "reviewed_at": "2026-09-25",
   "sources": [
     {
@@ -138,12 +138,6 @@
         {"name":"images_1024x768","kind":"http","url":"https://datasets.vqa.mmsp-kn.de/archives/koniq10k_1024x768.zip","bytes":5608799013,"extract":true},
         {"name":"scores","kind":"http","url":"https://datasets.vqa.mmsp-kn.de/archives/koniq10k_scores_and_distributions.zip","bytes":303515,"extract":true}
       ]
-    },
-    {
-      "id": "sst", "active": false, "train_quota": 0,
-      "deprecated_reason": "Removed from the v2 main mixture; retained only for provenance of the already-downloaded snapshot.",
-      "homepage": "https://huggingface.co/datasets/stanfordnlp/sst", "license_status": "unknown_block_redistribution_until_reviewed",
-      "artifacts": [{"name":"dataset","kind":"hf_snapshot","repo_id":"stanfordnlp/sst","revision":"82523085b89b96509979ffe069ebb3075b0692a5"}]
     }
   ]
 }

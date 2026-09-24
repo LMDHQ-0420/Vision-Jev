@@ -9,9 +9,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = [
     "README.md",
+    "README_CN.md",
     "STATUS.md",
     "LICENSE",
-    "CONTRIBUTING.md",
+    "asset/Vision-Jev.svg",
     "environment.yml",
     "docs/index.md",
     "docs/architecture/system.md",
