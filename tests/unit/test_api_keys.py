@@ -24,6 +24,15 @@ class APIKeysTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "must contain only"):
                 load_api_keys(path)
 
+    def test_kimi_can_be_required_without_glm_balance(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "api_keys.toml"
+            path.write_text('[kimi]\napi_key="kimi-secret"\n[glm]\napi_key=""\n')
+            keys = load_api_keys(path, required_providers=("kimi",))
+            self.assertEqual(keys.kimi, "kimi-secret")
+            with self.assertRaisesRegex(ValueError, "glm"):
+                load_api_keys(path)
+
 
 if __name__ == "__main__":
     unittest.main()

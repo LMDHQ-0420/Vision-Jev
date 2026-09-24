@@ -3,7 +3,7 @@
 | Component | Status | Evidence |
 |---|---|---|
 | Repository/data/run contracts | structural_check | iterations 2026-09-24-001/002 |
-| Hidden Choice/Noul/Score/value heads | implemented and CPU-tested in `vision-jev` env | repository suite 25/25 passed |
+| Hidden Choice/Noul/Score/value heads | implemented and CPU-tested in `vision-jev` env | repository suite 27/27 passed |
 | Region evidence fusion | implemented, native grid mapping pending | code only |
 | Qwen3.5 native processor/backbone adapter | planned M1 | none |
 | Raw public datasets | 15 active sources registered; GUI-Odyssey 8,500-step subset and all other required source assets complete | data-root `_state/downloads`; source ledger |

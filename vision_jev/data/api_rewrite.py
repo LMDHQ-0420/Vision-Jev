@@ -19,7 +19,6 @@ from vision_jev.data.schema import validate_jsonl
 
 PROVIDERS = {
     "kimi": {"base_url": "https://api.moonshot.cn/v1", "model": "kimi-k2.6"},
-    "glm": {"base_url": "https://open.bigmodel.cn/api/paas/v4", "model": "glm-5.3-flash"},
 }
 _NUMBER = re.compile(r"(?<!\w)[+-]?(?:\d+(?:\.\d+)?|\.\d+)(?!\w)")
 _NEGATION = re.compile(
@@ -36,18 +35,7 @@ class RewriteResult:
     provider: str
     model: str
     output: str
-
-
-@dataclass(frozen=True)
-class BatchRewriteResult:
-    accepted: int
-    requested: int
-    rejected: dict[str, int]
-    task_counts: dict[str, int]
-    provider: str
-    model: str
-    batch_id: str
-    output: str
+    stopped_reason: str | None
 
 
 def audit_rewrites(candidates: Path, parent_manifest: Path) -> dict[str, Any]:
@@ -129,6 +117,10 @@ def audit_rewrites(candidates: Path, parent_manifest: Path) -> dict[str, Any]:
 
 def _normalized(text: str) -> str:
     return _SPACE.sub(" ", text.strip()).casefold()
+
+
+def _backoff_delay(attempt: int, base_seconds: float, cap_seconds: float) -> float:
+    return min(base_seconds * pow(2.0, attempt), cap_seconds)
 
 
 def select_parents(
@@ -336,87 +328,39 @@ def generate_rewrites(
     keys: APIKeys,
     destination: Path,
     provider: str = "kimi",
-    max_attempts: int = 3,
-    max_workers: int = 4,
-    group_size: int = 1,
-    min_interval_seconds: float = 0.0,
+    max_attempts: int = 5,
+    max_workers: int = 1,
+    group_size: int = 60,
+    min_interval_seconds: float = 21.0,
+    backoff_base_seconds: float = 2.0,
+    backoff_cap_seconds: float = 60.0,
+    max_runtime_seconds: float = 4.75 * 60 * 60,
 ) -> RewriteResult:
-    """Generate a small or fallback batch synchronously and retain only checked rows."""
+    """Generate checked rewrites with Kimi and resumable grouped checkpoints."""
+    if provider != "kimi":
+        raise ValueError("API rewriting supports Kimi only")
+    if group_size < 2:
+        raise ValueError("group_size must be at least 2 for resumable API generation")
+    if max_runtime_seconds <= 0:
+        raise ValueError("max_runtime_seconds must be positive")
+    if backoff_base_seconds <= 0 or backoff_cap_seconds < backoff_base_seconds:
+        raise ValueError("backoff values must be positive and cap must be at least base")
     client, model = _client(provider, keys)
     destination.parent.mkdir(parents=True, exist_ok=True)
     parent_rows = list(parents)
-    if group_size > 1:
-        return _generate_grouped_rewrites(
-            parent_rows,
-            client=client,
-            model=model,
-            destination=destination,
-            provider=provider,
-            max_attempts=max_attempts,
-            group_size=group_size,
-            min_interval_seconds=min_interval_seconds,
-            max_workers=max_workers,
-        )
-
-    def process(parent: dict[str, Any]) -> tuple[dict[str, Any] | None, int, Counter[str]]:
-        local_rejected: Counter[str] = Counter()
-        local_attempted = 0
-        for attempt in range(max_attempts):
-            local_attempted += 1
-            try:
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=rewrite_messages(parent),
-                    response_format={"type": "json_object"},
-                    temperature=0.6 if provider == "kimi" else 0.3,
-                    extra_body={"thinking": {"type": "disabled"}} if provider == "kimi" else {},
-                    timeout=120,
-                )
-                content = response.choices[0].message.content or ""
-                question = _extract_question(content)
-                reason = validate_rewrite(
-                    str(parent["question"]), question, str(parent["language"])
-                )
-                if reason is None:
-                    return (
-                        make_rewrite(parent, question, provider, model),
-                        local_attempted,
-                        local_rejected,
-                    )
-                local_rejected[reason] += 1
-            except Exception as exc:  # provider errors are recorded without secret-bearing payloads
-                local_rejected[type(exc).__name__] += 1
-            if attempt + 1 < max_attempts:
-                time.sleep(min(2**attempt, 4))
-        local_rejected["exhausted_parent"] += 1
-        return None, local_attempted, local_rejected
-
-    accepted: list[dict[str, Any]] = []
-    rejected: Counter[str] = Counter()
-    attempted = 0
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        outcomes = executor.map(process, parent_rows)
-        for sample, local_attempted, local_rejected in outcomes:
-            attempted += local_attempted
-            rejected.update(local_rejected)
-            if sample is None:
-                continue
-            accepted.append(sample)
-
-    temporary = destination.with_suffix(destination.suffix + ".tmp")
-    with temporary.open("w", encoding="utf-8") as handle:
-        for sample in accepted:
-            handle.write(json.dumps(sample, ensure_ascii=False, separators=(",", ":")) + "\n")
-    temporary.replace(destination)
-    if accepted:
-        validate_jsonl(destination, check_assets=True)
-    return RewriteResult(
-        accepted=len(accepted),
-        attempted=attempted,
-        rejected=dict(sorted(rejected.items())),
-        provider=provider,
+    return _generate_grouped_rewrites(
+        parent_rows,
+        client=client,
         model=model,
-        output=str(destination),
+        destination=destination,
+        provider=provider,
+        max_attempts=max_attempts,
+        group_size=group_size,
+        min_interval_seconds=min_interval_seconds,
+        max_workers=max_workers,
+        backoff_base_seconds=backoff_base_seconds,
+        backoff_cap_seconds=backoff_cap_seconds,
+        max_runtime_seconds=max_runtime_seconds,
     )
 
 
@@ -431,6 +375,9 @@ def _generate_grouped_rewrites(
     group_size: int,
     min_interval_seconds: float,
     max_workers: int,
+    backoff_base_seconds: float,
+    backoff_cap_seconds: float,
+    max_runtime_seconds: float,
 ) -> RewriteResult:
     if group_size < 2:
         raise ValueError("group_size must be at least 2")
@@ -448,6 +395,8 @@ def _generate_grouped_rewrites(
     rejected: Counter[str] = Counter()
     attempted = 0
     last_wave_started = 0.0
+    started = time.monotonic()
+    stopped_reason: str | None = None
 
     def request_group(
         group: list[dict[str, Any]],
@@ -457,8 +406,8 @@ def _generate_grouped_rewrites(
                 model=model,
                 messages=grouped_rewrite_messages(group),
                 response_format={"type": "json_object"},
-                temperature=0.6 if provider == "kimi" else 0.3,
-                extra_body={"thinking": {"type": "disabled"}} if provider == "kimi" else {},
+                temperature=0.6,
+                extra_body={"thinking": {"type": "disabled"}},
                 timeout=300,
             )
             content = response.choices[0].message.content or ""
@@ -479,6 +428,12 @@ def _generate_grouped_rewrites(
                 for offset in range(0, len(pending), group_size)
             ]
             for wave_offset in range(0, len(groups), max_workers):
+                if time.monotonic() - started >= max_runtime_seconds:
+                    stopped_reason = "runtime_limit"
+                    next_pending.extend(
+                        sample for group in groups[wave_offset:] for sample in group
+                    )
+                    break
                 wave = groups[wave_offset : wave_offset + max_workers]
                 wait_for = min_interval_seconds - (time.monotonic() - last_wave_started)
                 if wait_for > 0:
@@ -523,8 +478,22 @@ def _generate_grouped_rewrites(
                         flush=True,
                     )
             pending = next_pending
+            if stopped_reason is not None:
+                break
+            if pending and _attempt + 1 < max_attempts:
+                delay = _backoff_delay(_attempt, backoff_base_seconds, backoff_cap_seconds)
+                remaining = max_runtime_seconds - (time.monotonic() - started)
+                if remaining <= delay:
+                    stopped_reason = "runtime_limit"
+                    break
+                print(
+                    f"API retry backoff: {delay:.1f}s before attempt {_attempt + 2}",
+                    flush=True,
+                )
+                time.sleep(delay)
     if pending:
-        rejected["exhausted_parent"] += len(pending)
+        reason = "deferred_runtime_limit" if stopped_reason else "exhausted_parent"
+        rejected[reason] += len(pending)
     if accepted:
         validate_jsonl(destination, check_assets=True)
     return RewriteResult(
@@ -534,153 +503,5 @@ def _generate_grouped_rewrites(
         provider=provider,
         model=model,
         output=str(destination),
-    )
-
-
-def generate_rewrites_batch(
-    parents: Iterable[dict[str, Any]],
-    *,
-    keys: APIKeys,
-    destination: Path,
-    work_dir: Path,
-    choice: int,
-    noul: int,
-    provider: str = "kimi",
-    poll_seconds: int = 30,
-) -> BatchRewriteResult:
-    """Submit or resume an OpenAI-compatible Batch job and build exact task quotas."""
-    parent_rows = list(parents)
-    client, model = _client(provider, keys)
-    work_dir.mkdir(parents=True, exist_ok=True)
-    request_path = work_dir / "requests.jsonl"
-    parent_path = work_dir / "parents.jsonl"
-    state_path = work_dir / "batch-state.json"
-    raw_output_path = work_dir / "responses.jsonl"
-
-    if state_path.exists():
-        state = json.loads(state_path.read_text(encoding="utf-8"))
-        batch_id = str(state["batch_id"])
-    else:
-        with (
-            request_path.open("w", encoding="utf-8") as requests,
-            parent_path.open("w", encoding="utf-8") as parent_file,
-        ):
-            for index, parent in enumerate(parent_rows):
-                custom_id = f"rewrite-{index:06d}"
-                body: dict[str, Any] = {
-                    "model": model,
-                    "messages": rewrite_messages(parent),
-                    "response_format": {"type": "json_object"},
-                }
-                if provider == "glm":
-                    body["temperature"] = 0.3
-                if provider == "kimi":
-                    body["thinking"] = {"type": "disabled"}
-                request = {
-                    "custom_id": custom_id,
-                    "method": "POST",
-                    "url": "/v1/chat/completions",
-                    "body": body,
-                }
-                requests.write(json.dumps(request, ensure_ascii=False) + "\n")
-                parent_file.write(
-                    json.dumps({"custom_id": custom_id, "sample": parent}, ensure_ascii=False)
-                    + "\n"
-                )
-        with request_path.open("rb") as handle:
-            upload = client.files.create(file=handle, purpose="batch")
-        batch = client.batches.create(
-            input_file_id=upload.id,
-            endpoint="/v1/chat/completions",
-            completion_window="1d",
-        )
-        batch_id = str(batch.id)
-        state_path.write_text(
-            json.dumps(
-                {
-                    "batch_id": batch_id,
-                    "input_file_id": str(upload.id),
-                    "provider": provider,
-                    "model": model,
-                },
-                ensure_ascii=False,
-                indent=2,
-            )
-            + "\n",
-            encoding="utf-8",
-        )
-
-    terminal = {"completed", "failed", "expired", "cancelled"}
-    while True:
-        batch = client.batches.retrieve(batch_id)
-        status = str(batch.status)
-        counts = getattr(batch, "request_counts", None)
-        print(f"API batch {batch_id}: {status} {counts or ''}", flush=True)
-        if status in terminal:
-            break
-        time.sleep(poll_seconds)
-    if status != "completed" or not batch.output_file_id:
-        raise RuntimeError(f"API batch {batch_id} ended with status {status}")
-    content = client.files.content(batch.output_file_id)
-    content.write_to_file(raw_output_path)
-
-    parent_by_id = {
-        row["custom_id"]: row["sample"]
-        for row in (
-            json.loads(raw) for raw in parent_path.read_text(encoding="utf-8").splitlines() if raw
-        )
-    }
-    accepted_by_task: dict[str, list[dict[str, Any]]] = {"choice": [], "noul": []}
-    rejected: Counter[str] = Counter()
-    for raw in raw_output_path.read_text(encoding="utf-8").splitlines():
-        if not raw:
-            continue
-        result = json.loads(raw)
-        batch_parent = parent_by_id.get(result.get("custom_id"))
-        if batch_parent is None:
-            rejected["unknown_custom_id"] += 1
-            continue
-        response = result.get("response", {})
-        if response.get("status_code") != 200:
-            rejected[f"http_{response.get('status_code', 'unknown')}"] += 1
-            continue
-        try:
-            message = response["body"]["choices"][0]["message"]
-            question = _extract_question(message.get("content") or "")
-            reason = validate_rewrite(
-                str(batch_parent["question"]), question, str(batch_parent["language"])
-            )
-            if reason is not None:
-                rejected[reason] += 1
-                continue
-            task = str(batch_parent["task_type"])
-            accepted_by_task[task].append(make_rewrite(batch_parent, question, provider, model))
-        except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as exc:
-            rejected[type(exc).__name__] += 1
-
-    targets = {"choice": choice, "noul": noul}
-    selected: list[dict[str, Any]] = []
-    for task, target in targets.items():
-        if len(accepted_by_task[task]) < target:
-            raise ValueError(
-                f"batch produced only {len(accepted_by_task[task])}/{target} valid {task} rows"
-            )
-        selected.extend(accepted_by_task[task][:target])
-    selected.sort(key=lambda sample: str(sample["sample_id"]))
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary = destination.with_suffix(destination.suffix + ".tmp")
-    with temporary.open("w", encoding="utf-8") as handle:
-        for sample in selected:
-            handle.write(json.dumps(sample, ensure_ascii=False, separators=(",", ":")) + "\n")
-    temporary.replace(destination)
-    validate_jsonl(destination, check_assets=True)
-    return BatchRewriteResult(
-        accepted=len(selected),
-        requested=len(parent_rows),
-        rejected=dict(sorted(rejected.items())),
-        task_counts=targets,
-        provider=provider,
-        model=model,
-        batch_id=batch_id,
-        output=str(destination),
+        stopped_reason=stopped_reason,
     )

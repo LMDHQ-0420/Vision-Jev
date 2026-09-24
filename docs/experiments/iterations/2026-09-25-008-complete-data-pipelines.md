@@ -27,9 +27,11 @@
 
 1. 从已验证的 public 90k manifest 按固定 hash 选 2,200 Choice 与 1,100 Noul 父样本。
 2. 稳定配置每次请求最多放 60 个独立样本、单并发，调用间隔至少 21 秒，适配 3 RPM 与长请求并发限制。
-3. 每条输出单独执行 schema、语言、数字、否定、长度和资源检查；不同视觉样本可共享通用题干。
-4. 每批成功项立即追加到 `processed/api_rewrite/candidates.jsonl`；重启时按 `parent_sample_id` 跳过已完成项。
-5. 最终按固定 seed 选择精确的 2,000 Choice 与 1,000 Noul，并与 public 117k 合并为 120k。
+3. 不使用 GLM 兜底；失败轮次按 2、4、8……秒指数退让，最多 60 秒。
+4. 单次运行在 4.75 小时停止发新请求，保留逐批检查点；再次执行从未完成父样本续跑，避免触及 5 小时上限。
+5. 每条输出单独执行 schema、语言、数字、否定、长度和资源检查；不同视觉样本可共享通用题干。
+6. 每批成功项立即追加到 `processed/api_rewrite/candidates.jsonl`；重启时按 `parent_sample_id` 跳过已完成项。
+7. 最终按固定 seed 选择精确的 2,000 Choice 与 1,000 Noul，并与 public 117k 合并为 120k。
 
 ## 运行状态
 

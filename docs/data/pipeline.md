@@ -36,7 +36,9 @@ vision-jev data-rewrite-api \
   --output /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
   --choice 2200 --noul 1100 --provider kimi \
   --minimum-choice 2000 --minimum-noul 1000 \
-  --group-size 60 --min-interval-seconds 21
+  --group-size 60 --min-interval-seconds 21 \
+  --backoff-base-seconds 2 --backoff-cap-seconds 60 \
+  --max-runtime-hours 4.75
 vision-jev data-audit-rewrites \
   --candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
   --parents /mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl
@@ -49,7 +51,7 @@ vision-jev data-build-final \
 
 正式管线不提供本地数据生成入口。停用的本地生成与 MiniWoB 数据已经清理；历史结论只保留在迭代文档中。新增 27k 必须来自已登记的公开数据集，只允许自动下载、格式转换、过滤、去重和抽样。
 
-API 改写只改写 `question`；图片、候选、`target`、题型、语言和上游标签原样继承。程序逐条拒绝空文本、原句照抄、数字/否定变化、语言漂移和异常长度；不同视觉样本可以合法共享通用任务题干，唯一性由 `sample_id` 保证。Kimi 低 RPM 账号使用 grouped 请求降低请求数，并在每个成功批次追加检查点；`data-build-final` 再按固定 seed 精确选取 2,000 Choice 与 1,000 Noul。密钥只从被 Git 忽略的 `configs/local/api_keys.toml` 读取。
+API 改写只使用 Kimi，不启用 GLM 兜底，并且只改写 `question`；图片、候选、`target`、题型、语言和上游标签原样继承。程序逐条拒绝空文本、原句照抄、数字/否定变化、语言漂移和异常长度；不同视觉样本可以合法共享通用任务题干，唯一性由 `sample_id` 保证。低 RPM 账号使用 grouped 请求降低请求数，每轮失败按 2、4、8……秒指数退让（上限 60 秒），每个成功批次立即追加检查点。单次运行最多 4.75 小时，到时停止发新请求；再次运行会跳过已完成父样本并续跑。`data-build-final` 再按固定 seed 精确选取 2,000 Choice 与 1,000 Noul。密钥只从被 Git 忽略的 `configs/local/api_keys.toml` 读取。
 
 ## v2 来源门禁
 

@@ -94,7 +94,9 @@ vision-jev data-rewrite-api \
   --output /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
   --choice 2200 --noul 1100 --provider kimi \
   --minimum-choice 2000 --minimum-noul 1000 \
-  --group-size 60 --min-interval-seconds 21
+  --group-size 60 --min-interval-seconds 21 \
+  --backoff-base-seconds 2 --backoff-cap-seconds 60 \
+  --max-runtime-hours 4.75
 vision-jev data-audit-rewrites \
   --candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
   --parents /mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl

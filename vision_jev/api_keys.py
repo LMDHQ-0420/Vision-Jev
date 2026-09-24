@@ -15,7 +15,11 @@ class APIKeys:
     glm: str = field(repr=False)
 
 
-def load_api_keys(path: Path = DEFAULT_API_KEYS_PATH, *, require_values: bool = True) -> APIKeys:
+def load_api_keys(
+    path: Path = DEFAULT_API_KEYS_PATH,
+    *,
+    required_providers: tuple[str, ...] = ("kimi", "glm"),
+) -> APIKeys:
     """Read the two supported provider keys from the ignored local TOML file."""
     payload = tomllib.loads(path.read_text(encoding="utf-8"))
     expected = {"kimi": {"api_key"}, "glm": {"api_key"}}
@@ -29,6 +33,10 @@ def load_api_keys(path: Path = DEFAULT_API_KEYS_PATH, *, require_values: bool = 
     keys = APIKeys(
         kimi=str(payload["kimi"]["api_key"]).strip(), glm=str(payload["glm"]["api_key"]).strip()
     )
-    if require_values and (not keys.kimi or not keys.glm):
-        raise ValueError("fill both API keys in configs/local/api_keys.toml")
+    unknown = sorted(set(required_providers) - set(expected))
+    if unknown:
+        raise ValueError(f"unknown required API providers: {unknown}")
+    missing = [provider for provider in required_providers if not getattr(keys, provider)]
+    if missing:
+        raise ValueError(f"fill required API keys: {', '.join(missing)}")
     return keys

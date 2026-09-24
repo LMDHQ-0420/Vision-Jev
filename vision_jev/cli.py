@@ -142,7 +142,13 @@ def data_rewrite_api(args: argparse.Namespace) -> int:
         raise ValueError("minimum-choice cannot exceed choice candidates")
     if args.minimum_noul is not None and args.minimum_noul > args.noul:
         raise ValueError("minimum-noul cannot exceed noul candidates")
-    keys = load_api_keys(args.api_keys)
+    if args.max_runtime_hours <= 0 or args.max_runtime_hours >= 5:
+        raise ValueError("max-runtime-hours must be greater than 0 and less than 5")
+    if args.min_interval_seconds < 20:
+        raise ValueError("min-interval-seconds must be at least 20 for the Kimi 3 RPM limit")
+    if args.max_attempts < 1:
+        raise ValueError("max-attempts must be positive")
+    keys = load_api_keys(args.api_keys, required_providers=("kimi",))
     parents = select_parents(args.input, choice=args.choice, noul=args.noul, seed=args.seed)
     report = generate_rewrites(
         parents,
@@ -153,6 +159,9 @@ def data_rewrite_api(args: argparse.Namespace) -> int:
         max_workers=args.max_workers,
         group_size=args.group_size,
         min_interval_seconds=args.min_interval_seconds,
+        backoff_base_seconds=args.backoff_base_seconds,
+        backoff_cap_seconds=args.backoff_cap_seconds,
+        max_runtime_seconds=args.max_runtime_hours * 60 * 60,
     )
     print(json.dumps(report.__dict__, ensure_ascii=False, indent=2))
     task_counts: Counter[str] = Counter()
@@ -277,11 +286,14 @@ def build_parser() -> argparse.ArgumentParser:
     rewrite_parser.add_argument("--noul", type=int, required=True)
     rewrite_parser.add_argument("--minimum-choice", type=int)
     rewrite_parser.add_argument("--minimum-noul", type=int)
-    rewrite_parser.add_argument("--provider", choices=["kimi", "glm"], default="kimi")
-    rewrite_parser.add_argument("--max-attempts", type=int, default=3)
-    rewrite_parser.add_argument("--max-workers", type=int, default=4)
-    rewrite_parser.add_argument("--group-size", type=int, default=1)
-    rewrite_parser.add_argument("--min-interval-seconds", type=float, default=0.0)
+    rewrite_parser.add_argument("--provider", choices=["kimi"], default="kimi")
+    rewrite_parser.add_argument("--max-attempts", type=int, default=5)
+    rewrite_parser.add_argument("--max-workers", type=int, choices=[1], default=1)
+    rewrite_parser.add_argument("--group-size", type=int, default=60)
+    rewrite_parser.add_argument("--min-interval-seconds", type=float, default=21.0)
+    rewrite_parser.add_argument("--backoff-base-seconds", type=float, default=2.0)
+    rewrite_parser.add_argument("--backoff-cap-seconds", type=float, default=60.0)
+    rewrite_parser.add_argument("--max-runtime-hours", type=float, default=4.75)
     rewrite_parser.add_argument("--seed", default="vision-jev-api-rewrite")
     rewrite_parser.add_argument("--api-keys", type=Path, default=DEFAULT_API_KEYS_PATH)
     rewrite_parser.set_defaults(func=data_rewrite_api)

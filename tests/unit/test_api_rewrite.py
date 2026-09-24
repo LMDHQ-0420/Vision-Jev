@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from vision_jev.data.api_rewrite import (
+    _backoff_delay,
     _extract_grouped_questions,
     audit_rewrites,
     make_rewrite,
@@ -46,6 +47,12 @@ def _sample(sample_id: str, task: str) -> dict[str, object]:
 
 
 class APIRewriteTest(unittest.TestCase):
+    def test_exponential_backoff_is_capped(self) -> None:
+        self.assertEqual(
+            [_backoff_delay(attempt, 2.0, 10.0) for attempt in range(5)],
+            [2.0, 4.0, 8.0, 10.0, 10.0],
+        )
+
     def test_grouped_response_requires_exact_ids(self) -> None:
         payload = json.dumps(
             {
