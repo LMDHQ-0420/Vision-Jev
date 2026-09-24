@@ -126,6 +126,8 @@ def _sample(
     supervision_semantics: str,
     evidence_reference: str,
     parent_id: str | None = None,
+    image_size: tuple[int, int] = CANVAS,
+    license_name: str = "CC0-1.0",
 ) -> dict[str, Any]:
     candidates = list(options)
     sample: dict[str, Any] = {
@@ -136,13 +138,13 @@ def _sample(
         "source": source,
         "source_version": "v2.2",
         "source_bucket": source_bucket,
-        "license": "CC0-1.0",
+        "license": license_name,
         "split": "train",
         "task_type": task_type,
         "image": str(image),
         "image_metadata": {
-            "width": CANVAS[0],
-            "height": CANVAS[1],
+            "width": image_size[0],
+            "height": image_size[1],
             "transform": "none",
             "visual_budget": "source_native",
             "synthetic": True,
@@ -914,6 +916,143 @@ def generate_local_pilot(
         "language_counts": {"en": len(samples)},
         "choice_k_counts": dict(bucket_counts),
         "unique_images": len(image_paths),
+        "output": str(destination),
+        "asset_root": str(image_root),
+        "manifest_sha256": _sha256(destination),
+    }
+    destination.with_suffix(".generation-report.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    return report
+
+
+def generate_miniwob_pilot(
+    *,
+    data_root: Path,
+    destination: Path,
+    seeds_per_environment: int = 3,
+) -> dict[str, Any]:
+    """Capture and reward-verify a small batch of real MiniWoB++ observations."""
+    import gymnasium
+    import miniwob  # type: ignore[import-not-found]
+    from miniwob.action import ActionTypes  # type: ignore[import-not-found]
+
+    if seeds_per_environment < 1:
+        raise ValueError("seeds_per_environment must be positive")
+    gymnasium.register_envs(miniwob)
+    environments = {
+        "click-test-2": ("button",),
+        "click-button": ("button",),
+        "click-link": ("span", "t"),
+        "click-tab": ("a",),
+    }
+    upstream_revision = "33c3b4ddef8c6eb67c57a29663d844b1eda7e614"
+    image_root = data_root / "generated" / "miniwob-pilot-33c3b4d" / "images"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(destination.suffix + ".tmp")
+    samples: list[dict[str, Any]] = []
+    rewards: list[float] = []
+
+    for environment_name, candidate_tags in environments.items():
+        for local_seed in range(seeds_per_environment):
+            episode_seed = 4200 + local_seed
+            environment = gymnasium.make(f"miniwob/{environment_name}-v1", wait_ms=200)
+            try:
+                observation, _ = environment.reset(seed=episode_seed)
+                screenshot = observation["screenshot"]
+                height, width = int(screenshot.shape[0]), int(screenshot.shape[1])
+                target_value = dict(observation["fields"]).get("target", "")
+                target_text = (
+                    f"Tab #{target_value}" if environment_name == "click-tab" else target_value
+                )
+                candidates: list[dict[str, Any]] = []
+                target_ref: int | None = None
+                target_id: str | None = None
+                for element in observation["dom_elements"]:
+                    text = str(element["text"]).strip()
+                    if str(element["tag"]) not in candidate_tags or not text:
+                        continue
+                    left = max(0, round(float(element["left"][0])))
+                    top = max(0, round(float(element["top"][0])))
+                    right = min(width, left + max(1, round(float(element["width"][0]))))
+                    bottom = min(height, top + max(1, round(float(element["height"][0]))))
+                    if right <= left or bottom <= top:
+                        continue
+                    candidate_id = f"dom:{int(element['ref'])}"
+                    candidates.append(
+                        _candidate(
+                            candidate_id,
+                            f"visible element {len(candidates) + 1}",
+                            box=(left, top, right, bottom),
+                            action_type="click",
+                        )
+                    )
+                    if text == target_text:
+                        target_ref = int(element["ref"])
+                        target_id = candidate_id
+                if target_ref is None or target_id is None or len(candidates) < 2:
+                    raise RuntimeError(
+                        f"unable to construct candidates for {environment_name} seed {episode_seed}"
+                    )
+                unwrapped: Any = environment.unwrapped
+                action = unwrapped.create_action(ActionTypes.CLICK_ELEMENT, ref=target_ref)
+                _, reward, terminated, truncated, _ = environment.step(action)
+                if float(reward) <= 0 or not terminated or truncated:
+                    raise RuntimeError(
+                        f"MiniWoB expert failed for {environment_name} seed {episode_seed}"
+                    )
+                rewards.append(float(reward))
+                image_module, _, _ = _pil()
+                image = image_module.fromarray(screenshot)
+                image_path = image_root / environment_name / f"seed-{episode_seed:05d}.png"
+                _save_image(image, image_path)
+                sample_id = f"miniwob:{environment_name}:{episode_seed}"
+                sample = _sample(
+                    sample_id=sample_id,
+                    root_id=sample_id,
+                    group_id=sample_id,
+                    source="miniwob_plusplus",
+                    source_bucket="programmatic",
+                    task_type="choice",
+                    image=image_path,
+                    question=str(observation["utterance"]),
+                    options=candidates,
+                    target=target_id,
+                    target_kind="single",
+                    input_track="miniwob_screenshot_regions",
+                    proposal_kind="environment",
+                    supervision_semantics="verified_action_set",
+                    evidence_reference=(
+                        f"miniwob-reward:{environment_name}:{episode_seed}:{float(reward):.6f}"
+                    ),
+                    image_size=(width, height),
+                    license_name="MIT",
+                )
+                sample["upstream_revision"] = upstream_revision
+                sample["environment_seed"] = episode_seed
+                sample["quality"]["environment_reward_verified"] = True
+                samples.append(sample)
+            finally:
+                environment.close()
+
+    with temporary.open("w", encoding="utf-8") as handle:
+        for sample in samples:
+            handle.write(json.dumps(sample, ensure_ascii=False, separators=(",", ":")) + "\n")
+    temporary.replace(destination)
+    validation = validate_jsonl(destination, check_assets=True)
+    if validation.questions != len(samples):
+        raise RuntimeError("MiniWoB pilot validation count mismatch")
+    report = {
+        "schema_version": 1,
+        "pilot": True,
+        "source": "miniwob_plusplus",
+        "upstream_revision": upstream_revision,
+        "environments": list(environments),
+        "questions": len(samples),
+        "reward_verified": len(rewards),
+        "minimum_reward": min(rewards),
+        "api_calls": 0,
+        "project_human_annotations": 0,
         "output": str(destination),
         "asset_root": str(image_root),
         "manifest_sha256": _sha256(destination),

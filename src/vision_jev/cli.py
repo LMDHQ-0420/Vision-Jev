@@ -18,7 +18,11 @@ from vision_jev.data.download import (
     load_catalog,
     materialize_weblinx_subset,
 )
-from vision_jev.data.generate import generate_local_dataset, generate_local_pilot
+from vision_jev.data.generate import (
+    generate_local_dataset,
+    generate_local_pilot,
+    generate_miniwob_pilot,
+)
 from vision_jev.data.pipeline import ADAPTERS, normalize_source
 from vision_jev.tracking import create_run, finalize_run
 
@@ -125,7 +129,13 @@ def data_build_public(args: argparse.Namespace) -> int:
 
 
 def data_generate_local(args: argparse.Namespace) -> int:
-    if args.pilot:
+    if args.miniwob_pilot:
+        report = generate_miniwob_pilot(
+            data_root=args.data_root,
+            destination=args.output,
+            seeds_per_environment=args.samples_per_family,
+        )
+    elif args.pilot:
         report = generate_local_pilot(
             data_root=args.data_root,
             mixture_config=args.mixture,
@@ -227,7 +237,9 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("/mnt/sda1/sol_data/vision-jev/processed/local_27k/canonical.jsonl"),
     )
     local_parser.add_argument("--seed", default="vision-jev-local-v2.2")
-    local_parser.add_argument("--pilot", action="store_true")
+    pilot_mode = local_parser.add_mutually_exclusive_group()
+    pilot_mode.add_argument("--pilot", action="store_true")
+    pilot_mode.add_argument("--miniwob-pilot", action="store_true")
     local_parser.add_argument("--samples-per-family", type=int, default=8)
     local_parser.set_defaults(func=data_generate_local)
     return parser

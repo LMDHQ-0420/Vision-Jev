@@ -22,7 +22,7 @@ train = [
   "pillow>=11",
   "numpy>=2.0",
 ]
-rl = ["gymnasium>=1.2", "minigrid>=3.0"]
+rl = ["gymnasium>=1.2", "minigrid>=3.0", "miniwob==1.1.0"]
 data = [
   "datasets>=4.0",
   "pillow>=11",

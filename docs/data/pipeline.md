@@ -32,6 +32,8 @@ vision-jev data-build-public --mixture configs/data/sft_120k.json \
   --output /mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl
 vision-jev data-generate-local --pilot --samples-per-family 8 \
   --output /mnt/sda1/sol_data/vision-jev/pilots/local-27k-v2.2-pilot.jsonl
+vision-jev data-generate-local --miniwob-pilot --samples-per-family 2 \
+  --output /mnt/sda1/sol_data/vision-jev/pilots/miniwob-v1-pilot.jsonl
 # pilot 验收后才运行全量：
 vision-jev data-generate-local
 ```

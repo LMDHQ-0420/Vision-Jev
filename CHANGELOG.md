@@ -13,3 +13,4 @@
 - 数据策略 v2.2：WebLINX 直接使用上游开源内容；保留来源语言；不增加 `task_family`；新增 30k 数据按 27k 本地自动生成、3k API 辅助且程序验证、0 项目人工标注规划。
 - CLEVR 标签来源修正为程序生成，公共 90k manifest 默认输出升级为 v2.2。
 - 新增确定性 `data-generate-local` 管线：视觉网格/GUI/集合比较/Score/信息充分性及求解器验证的困难候选、反事实；支持小批 pilot 后再运行 27k 全量。
+- 固定并验证 MiniWoB++ 官方环境，新增真实截图、DOM 候选和环境奖励共同校验的 MiniWoB++ pilot 入口。
