@@ -35,7 +35,7 @@ pip install -e '.[dev]'
 
 训练依赖单独安装：`pip install -e '.[train]'`。具体流程从 [教程入口](docs/index.md) 开始。
 
-数据依赖与下载命令：`pip install -e '.[data]'`，然后运行 `vision-jev data-download`。WebLINX 使用 `vision-jev data-download-weblinx-subset` 做训练集 PII 预筛和按需截图下载，不应拉取全量小文件快照。默认数据根目录是 `/mnt/sda1/sol_data/vision-jev`；可用 `vision-jev data-inventory` 查看只有完成记录才计入的实际状态。
+数据依赖与下载命令：`pip install -e '.[data]'`，然后运行 `vision-jev data-download`。WebLINX 使用 `vision-jev data-download-weblinx-subset` 做固定 train 子集与按需截图下载，不拉取全量小文件快照。默认数据根目录是 `/mnt/sda1/sol_data/vision-jev`；可用 `vision-jev data-inventory` 查看只有完成记录才计入的实际状态。
 
 固定环境名为 `vision-jev`：`conda env create -f environment.yml`，然后 `conda activate vision-jev`。若环境已存在，用 `conda env update -n vision-jev -f environment.yml --prune`，并在 run 中记录变更后的完整包版本。当前实际安装版本与硬件边界见 `docs/development/environment-baseline.md`。
 

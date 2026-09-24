@@ -6,7 +6,7 @@
 |---|---:|---|---|
 | Multimodal-Mind2Web | 6,000 | 不重复 `action_uid`；仅动作前截图、任务、已发生历史；DOM 候选 | OpenRAIL/研究声明，复核 |
 | AndroidControl | 16,000 | 高层目标 + 当前截图；低层当前指令不进主轨；accessibility tree 仅产候选/验证 | 官方研究数据条款复核 |
-| WebLINX | 6,000 | 原始截图/页面/步骤对齐；只保留当前点之前历史；先做 PII 审计 | CC-BY-NC-SA-4.0，研究版本 |
+| WebLINX | 6,000 | 原始截图/页面/步骤对齐；只保留当前点之前历史；接受上游开源发布内容 | CC-BY-NC-SA-4.0，研究版本 |
 | GQA | 18,000 | 10k Choice + 8k Noul；balanced 起点；否定题额外核验 | 来源与底图条款复核 |
 | RefCOCO/+/g | 18,000 | 初始各 6k；oracle 与 detector 分轨；RefCOCOg 用 UMD split | 标注与 COCO 图片分别复核 |
 | VQAv2 | 8,000 | 3.2k Choice + 4.8k Noul；唯一答案要求规范化后 ≥8/10 | 标注与 COCO 图片分别复核 |
@@ -22,7 +22,7 @@
 - 数据根目录固定为 `/mnt/sda1/sol_data/vision-jev`，原始数据永不提交 Git。
 - HTTP 文件先写 `.part`，同时验证响应长度、目录中固定的精确字节数和 ZIP 结构；坏包移到带时间戳的 `.invalid-*`，不直接删除。
 - Hugging Face 来源固定 commit revision；AndroidControl 当前使用固定 revision 的原始 TFRecord 镜像，并要求发布前与官方 GCS 清单/哈希交叉核验。
-- WebLINX 不下载全量 659,934 文件：固定 train CSV 后进行文本 PII 预筛和确定性抽样，只物化入选 turn 的 replay/截图；图像 PII 审核前禁止进入发布 manifest。
+- WebLINX 不下载全量 659,934 文件：固定 train CSV 后确定性抽样，只物化入选 turn 的 replay/截图。按项目所有者决定信任上游开源发布的完整内容，不增加 OCR、文本 PII 过滤或发布阻断。
 - “已下载”只表示字节和结构完成，不表示许可、隐私、清洗或可训练性已验收。
 
 训练外另建 dev 6,000、calibration/threshold/audit 6,000（3k/2k/1k）和内部 test 12,000，整组隔离且不挪用官方测试样本补训练缺口。

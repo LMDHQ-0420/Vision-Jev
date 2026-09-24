@@ -28,7 +28,8 @@ vision-jev data-download --source weblinx --no-extract
 vision-jev data-download-weblinx-subset --target-rows 7000
 vision-jev data-inventory
 vision-jev data-normalize multimodal_mind2web
-vision-jev data-build-public --mixture configs/data/sft_120k.json
+vision-jev data-build-public --mixture configs/data/sft_120k.json \
+  --output /mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl
 ```
 
 `data-build-public` 按固定 seed 和 `sample_id` 哈希排序，从每个 canonical train 池取得精确配额；实现使用按配额有界的 streaming heap，不把百万级来源整体载入内存。任一来源不足即写 `*.build-report.json` 并失败，不产出主 manifest；成功时记录最终 manifest SHA-256、题型和语言实测分布。
@@ -37,7 +38,7 @@ vision-jev data-build-public --mixture configs/data/sft_120k.json
 
 - Mind2Web：只接受 CLICK、可合法确定参数的 TYPE/SELECT；动作前截图与 DOM 坐标一致、目标可见；每个原始动作按唯一 `action_uid` 计数。
 - AndroidControl：主轨只用高层目标；低层步骤说明另建辅助轨；accessibility tree 不作为纯视觉输入。
-- WebLINX：固定 train 索引，先做文本 PII 预筛，再确定性选择并只下载所需 replay/截图；图像 PII 审计完成前设置发布阻断。
+- WebLINX：固定 train 索引，确定性选择并只下载所需 replay/截图；信任上游开源发布内容，不增加 OCR/PII 过滤和发布阻断。
 - VQAv2/TextVQA：唯一答案主池需规范化后至少 8/10 一致，争议项写 quarantine manifest。
 - RefCOCO：oracle/detector 分 manifest 和指标；真实候选未召回目标时记录系统召回失败。
 - ChartQA：human/augmented 分开，表格仅 verifier；GQA 否定题做额外证据审计。

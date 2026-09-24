@@ -32,6 +32,6 @@ LM 特征去除退化则保留混合对照；集合层无稳定增益则默认�
 ## 数据实施顺序（v2）
 
 1. Mind2Web、AndroidControl、RefCOCO、GQA 小样本先跑通适配与泄漏测试。
-2. WebLINX、TextVQA、ChartQA 完成原始视觉资产与隐私/表格验证。
+2. WebLINX、TextVQA、ChartQA 完成原始视觉资产与表格验证；WebLINX 直接采用上游开源内容。
 3. 构建程序环境、视觉 Score、已知不确定性，再加入经验证的强模型增强。
 4. 冻结 train/dev/calibration/audit/test 的 root/group 分配，然后生成 pilot 与主 manifest。

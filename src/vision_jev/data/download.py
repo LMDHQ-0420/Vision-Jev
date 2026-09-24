@@ -17,10 +17,6 @@ from pathlib import Path
 from typing import Any
 
 WEBLINX_REVISION = "36ef9f79b43df50e25b7f3b68e5c9f6ccf4160e8"
-_WEBLINX_PII = re.compile(
-    r"(?:[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}|\b(?:\+?\d[\d .()-]{7,}\d)\b|password|passwd)",
-    re.IGNORECASE,
-)
 _WEBLINX_ACTION = re.compile(r'^(click|submit)\(uid="([^"]+)"')
 
 
@@ -276,8 +272,7 @@ def materialize_weblinx_subset(
     eligible: list[dict[str, Any]] = []
     for row_index, row in rows.iterrows():
         match = _WEBLINX_ACTION.match(str(row["action"]))
-        context = f"{row['utterances']}\n{row['action_history']}"
-        if match is None or _WEBLINX_PII.search(context):
+        if match is None:
             continue
         target_uid = match.group(2)
         candidates = str(row["candidates"])

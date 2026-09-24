@@ -9,7 +9,6 @@ from vision_jev.data import validate_jsonl
 from vision_jev.data.pipeline import (
     build_model_input,
     open_qa_sample,
-    sanitize_weblinx_candidate_text,
     stable_negatives,
 )
 
@@ -64,13 +63,6 @@ class DataPipelineTest(unittest.TestCase):
             path = Path(directory) / "sample.jsonl"
             path.write_text(json.dumps(sample) + "\n", encoding="utf-8")
             self.assertEqual(validate_jsonl(path).questions, 1)
-
-    def test_weblinx_candidate_text_redacts_pii(self) -> None:
-        self.assertEqual(
-            sanitize_weblinx_candidate_text("contact me@example.com"),
-            "sensitive text redacted",
-        )
-        self.assertEqual(sanitize_weblinx_candidate_text("  Submit   order  "), "Submit order")
 
 
 if __name__ == "__main__":

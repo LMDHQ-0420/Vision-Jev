@@ -636,19 +636,6 @@ def normalize_android_control(data_root: Path, destination: Path) -> int:
     return _write_jsonl(samples(), destination)
 
 
-PII_PATTERN = re.compile(
-    r"(?:[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}|\b(?:\+?\d[\d .()-]{7,}\d)\b|password|passwd)",
-    re.IGNORECASE,
-)
-
-
-def sanitize_weblinx_candidate_text(value: str) -> str:
-    normalized = " ".join(value.split())[:256]
-    if PII_PATTERN.search(normalized):
-        return "sensitive text redacted"
-    return normalized or "visible webpage element"
-
-
 def normalize_weblinx(data_root: Path, destination: Path) -> int:
     import pandas as pd  # type: ignore[import-untyped]
 
@@ -678,13 +665,11 @@ def normalize_weblinx(data_root: Path, destination: Path) -> int:
             if width <= 0 or height <= 0:
                 continue
             text_match = re.search(r"\[\[text\]\]\s*(.*?)\s*\[\[bbox\]\]", part)
-            visible_text = sanitize_weblinx_candidate_text(
-                text_match.group(1) if text_match else ""
-            )
+            visible_text = " ".join((text_match.group(1) if text_match else "").split())[:256]
             parsed.append(
                 {
                     "id": f"element:{uid_match.group(1)}",
-                    "text": visible_text,
+                    "text": visible_text or "visible webpage element",
                     "box": [x, y, x + width, y + height],
                     "action_spec": {"type": intent},
                 }
@@ -699,11 +684,7 @@ def normalize_weblinx(data_root: Path, destination: Path) -> int:
             if selected_row is None:
                 continue
             task = " ".join(str(row["utterances"]).split())
-            if (
-                not task
-                or PII_PATTERN.search(task)
-                or PII_PATTERN.search(str(row["action_history"]))
-            ):
+            if not task:
                 continue
             intent = str(selected_row["intent"])
             target = f"element:{selected_row['target_uid']}"
@@ -750,9 +731,8 @@ def normalize_weblinx(data_root: Path, destination: Path) -> int:
                 "proposal_kind": "dom",
                 "quality": {
                     "future_turns_excluded": True,
-                    "text_pii_regex_passed": True,
-                    "image_pii_review": "pending",
-                    "release_blocked": True,
+                    "upstream_open_release_accepted": True,
+                    "release_blocked": False,
                 },
                 "teacher_only": False,
             }
@@ -896,6 +876,8 @@ def normalize_clevr(data_root: Path, destination: Path) -> int:
                 answer_pool=pools,
                 license_name="CC-BY-4.0",
                 evidence_reference=f"program:{item['question_index']}",
+                label_origin="programmatic",
+                origin_label_method="programmatic_scene_generator",
             )
 
     return _write_jsonl(samples(), destination)

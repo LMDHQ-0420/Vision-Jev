@@ -179,7 +179,7 @@ def build_parser() -> argparse.ArgumentParser:
     normalize_parser.add_argument("--output", type=Path)
     normalize_parser.set_defaults(func=data_normalize)
     build_parser = sub.add_parser(
-        "data-build-public", help="build the exact v2 public-data manifest or report shortages"
+        "data-build-public", help="build the exact v2.2 public-data manifest or report shortages"
     )
     build_parser.add_argument(
         "--data-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev")
@@ -188,7 +188,7 @@ def build_parser() -> argparse.ArgumentParser:
     build_parser.add_argument(
         "--output",
         type=Path,
-        default=Path("/mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.jsonl"),
+        default=Path("/mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl"),
     )
     build_parser.add_argument("--seed", default="vision-jev-sft-v2")
     build_parser.set_defaults(func=data_build_public)
