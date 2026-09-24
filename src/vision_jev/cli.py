@@ -18,6 +18,7 @@ from vision_jev.data.download import (
     load_catalog,
     materialize_weblinx_subset,
 )
+from vision_jev.data.generate import generate_local_dataset, generate_local_pilot
 from vision_jev.data.pipeline import ADAPTERS, normalize_source
 from vision_jev.tracking import create_run, finalize_run
 
@@ -123,6 +124,27 @@ def data_build_public(args: argparse.Namespace) -> int:
     return 0
 
 
+def data_generate_local(args: argparse.Namespace) -> int:
+    if args.pilot:
+        report = generate_local_pilot(
+            data_root=args.data_root,
+            mixture_config=args.mixture,
+            destination=args.output,
+            samples_per_family=args.samples_per_family,
+            seed=args.seed,
+        )
+    else:
+        report = generate_local_dataset(
+            data_root=args.data_root,
+            mixture_config=args.mixture,
+            destination=args.output,
+            seed=args.seed,
+            progress=print,
+        )
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="vision-jev")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -192,6 +214,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     build_parser.add_argument("--seed", default="vision-jev-sft-v2")
     build_parser.set_defaults(func=data_build_public)
+    local_parser = sub.add_parser(
+        "data-generate-local", help="generate the deterministic API-free local visual block"
+    )
+    local_parser.add_argument(
+        "--data-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev")
+    )
+    local_parser.add_argument("--mixture", type=Path, default=Path("configs/data/sft_120k.json"))
+    local_parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("/mnt/sda1/sol_data/vision-jev/processed/local_27k/canonical.jsonl"),
+    )
+    local_parser.add_argument("--seed", default="vision-jev-local-v2.2")
+    local_parser.add_argument("--pilot", action="store_true")
+    local_parser.add_argument("--samples-per-family", type=int, default=8)
+    local_parser.set_defaults(func=data_generate_local)
     return parser
 
 

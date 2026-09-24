@@ -25,6 +25,7 @@ train = [
 rl = ["gymnasium>=1.2", "minigrid>=3.0"]
 data = [
   "datasets>=4.0",
+  "pillow>=11",
   "pyarrow>=20",
   "pandas>=2.2",
   "tfrecord>=1.14",

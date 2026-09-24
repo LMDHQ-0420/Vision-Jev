@@ -30,9 +30,15 @@ vision-jev data-inventory
 vision-jev data-normalize multimodal_mind2web
 vision-jev data-build-public --mixture configs/data/sft_120k.json \
   --output /mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl
+vision-jev data-generate-local --pilot --samples-per-family 8 \
+  --output /mnt/sda1/sol_data/vision-jev/pilots/local-27k-v2.2-pilot.jsonl
+# pilot 验收后才运行全量：
+vision-jev data-generate-local
 ```
 
 `data-build-public` 按固定 seed 和 `sample_id` 哈希排序，从每个 canonical train 池取得精确配额；实现使用按配额有界的 streaming heap，不把百万级来源整体载入内存。任一来源不足即写 `*.build-report.json` 并失败，不产出主 manifest；成功时记录最终 manifest SHA-256、题型和语言实测分布。
+
+`data-generate-local` 使用固定 seed 和确定性求解器生成本地视觉资产。全量输出严格检查 27k 总数、18k Choice/3k Noul/6k Score、Choice K 四档数量、图片存在性和 schema；困难候选与反事实继承父组并重新求解。`--pilot` 用于先覆盖全部规则族的小批质量检查。
 
 ## v2 来源门禁
 
