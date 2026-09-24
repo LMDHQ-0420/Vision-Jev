@@ -25,6 +25,7 @@ from vision_jev.data.download import (
     materialize_gui_odyssey_subset,
     materialize_weblinx_subset,
 )
+from vision_jev.data.pilot import build_pilot_manifest
 from vision_jev.data.pipeline import ADAPTERS, normalize_source
 from vision_jev.tracking import create_run, finalize_run
 
@@ -199,6 +200,48 @@ def data_audit_rewrites(args: argparse.Namespace) -> int:
     return 0 if not report["invariant_violations"] else 2
 
 
+def data_build_pilot(args: argparse.Namespace) -> int:
+    report = build_pilot_manifest(
+        args.input,
+        args.output,
+        questions=args.questions,
+        seed=args.seed,
+    )
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+def model_prepare(args: argparse.Namespace) -> int:
+    from vision_jev.model.qwen35 import prepare_snapshot
+
+    destination = prepare_snapshot(args.config, args.model_root)
+    print(destination)
+    return 0
+
+
+def train_sft_command(args: argparse.Namespace) -> int:
+    from vision_jev.train.sft import train_sft
+
+    summary = train_sft(args.config, args.data, args.output, model_root=args.model_root)
+    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    return 0
+
+
+def eval_sft_command(args: argparse.Namespace) -> int:
+    from vision_jev.train.sft import evaluate_checkpoint
+
+    report = evaluate_checkpoint(
+        args.config,
+        args.data,
+        args.checkpoint,
+        args.output,
+        model_root=args.model_root,
+        maximum=args.maximum,
+    )
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="vision-jev")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -316,6 +359,42 @@ def build_parser() -> argparse.ArgumentParser:
     audit_parser.add_argument("--candidates", type=Path, required=True)
     audit_parser.add_argument("--parents", type=Path, required=True)
     audit_parser.set_defaults(func=data_audit_rewrites)
+    pilot_parser = sub.add_parser(
+        "data-build-pilot", help="build a deterministic source/task-stratified pilot manifest"
+    )
+    pilot_parser.add_argument("--input", type=Path, required=True)
+    pilot_parser.add_argument("--output", type=Path, required=True)
+    pilot_parser.add_argument("--questions", type=int, default=12_000)
+    pilot_parser.add_argument("--seed", default="vision-jev-pilot-12k")
+    pilot_parser.set_defaults(func=data_build_pilot)
+    model_parser = sub.add_parser(
+        "model-prepare", help="download the pinned Qwen model snapshot explicitly"
+    )
+    model_parser.add_argument("--config", type=Path, default=Path("configs/model/qwen35_08b.json"))
+    model_parser.add_argument(
+        "--model-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev/models")
+    )
+    model_parser.set_defaults(func=model_prepare)
+    train_parser = sub.add_parser("train-sft", help="run answer-only multimodal Qwen SFT")
+    train_parser.add_argument("--config", type=Path, required=True)
+    train_parser.add_argument("--data", type=Path, required=True)
+    train_parser.add_argument("--output", type=Path, required=True)
+    train_parser.add_argument(
+        "--model-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev/models")
+    )
+    train_parser.set_defaults(func=train_sft_command)
+    eval_parser = sub.add_parser(
+        "eval-sft", help="evaluate structured answers from a trained SFT adapter"
+    )
+    eval_parser.add_argument("--config", type=Path, required=True)
+    eval_parser.add_argument("--data", type=Path, required=True)
+    eval_parser.add_argument("--checkpoint", type=Path, required=True)
+    eval_parser.add_argument("--output", type=Path, required=True)
+    eval_parser.add_argument("--maximum", type=int, default=300)
+    eval_parser.add_argument(
+        "--model-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev/models")
+    )
+    eval_parser.set_defaults(func=eval_sft_command)
     return parser
 
 

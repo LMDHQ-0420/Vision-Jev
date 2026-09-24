@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "stage": "sft_pilot_12k",
+  "evidence_status": "planned",
+  "model_config": "configs/model/qwen35_08b.json",
+  "data_config": "configs/data/pilot_12k.json",
+  "seed": 42,
+  "epochs": 2,
+  "microbatch_questions_per_device": 1,
+  "gradient_accumulation_steps": 16,
+  "learning_rate": 0.00003,
+  "weight_decay": 0.01,
+  "warmup_ratio": 0.03,
+  "gradient_clip": 1.0,
+  "lora_rank": 16,
+  "lora_alpha": 32,
+  "lora_dropout": 0.05,
+  "bf16": true,
+  "gradient_checkpointing": true,
+  "dataloader_workers": 0,
+  "log_every": 10,
+  "eval_batches": 50
+}

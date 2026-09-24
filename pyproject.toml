@@ -15,6 +15,7 @@ dependencies = []
 [project.optional-dependencies]
 train = [
   "torch>=2.7",
+  "torchvision>=0.22",
   "transformers>=4.55",
   "accelerate>=1.8",
   "peft>=0.16",

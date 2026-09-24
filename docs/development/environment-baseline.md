@@ -6,6 +6,7 @@ Environment name and location: `vision-jev`, `/home/sol/miniconda3/envs/vision-j
 |---|---:|
 | Python | 3.11.16 |
 | PyTorch | 2.14.0+cu130 |
+| Torchvision | 0.29.0 |
 | CUDA build carried by PyTorch | 13.0 |
 | Transformers | 5.17.0 |
 | PEFT | 0.21.0 |

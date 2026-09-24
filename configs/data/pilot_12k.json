@@ -9,5 +9,7 @@
   "teacher_only_questions": 0,
   "candidate_k_primary": [2, 8],
   "candidate_k_extended": [16, 32],
-  "manifest": "data/manifests/pilot-12k.jsonl"
+  "manifest": "/mnt/sda1/sol_data/vision-jev/manifests/pilot-12k.jsonl",
+  "seed": "vision-jev-pilot-12k",
+  "eval_group_fraction": 0.05
 }
