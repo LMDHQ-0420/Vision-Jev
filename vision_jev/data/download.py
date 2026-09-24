@@ -261,7 +261,11 @@ def inventory(data_root: Path) -> dict[str, Any]:
 
 
 def materialize_gui_odyssey_subset(
-    data_root: Path, *, target_rows: int = 8500, seed: str = "vision-jev-sft"
+    data_root: Path,
+    *,
+    target_rows: int = 8500,
+    seed: str = "vision-jev-sft",
+    max_workers: int = 8,
 ) -> dict[str, Any]:
     """Select train steps first, then fetch only their source screenshots."""
     from huggingface_hub import hf_hub_download, list_repo_tree
@@ -350,7 +354,7 @@ def materialize_gui_odyssey_subset(
             token=token,
         )
 
-    with ThreadPoolExecutor(max_workers=2) as executor:
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {executor.submit(fetch, item): item for item in selected}
         for completed, future in enumerate(as_completed(futures), 1):
             future.result()

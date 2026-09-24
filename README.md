@@ -90,6 +90,18 @@ vision-jev data-normalize visual7w
 vision-jev data-build-public \
   --mixture configs/data/sft_120k.json \
   --output /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl
+vision-jev data-rewrite-api \
+  --input /mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl \
+  --output /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
+  --choice 2200 --noul 1100 --provider kimi \
+  --minimum-choice 2000 --minimum-noul 1000 \
+  --group-size 60 --min-interval-seconds 21
+vision-jev data-audit-rewrites \
+  --candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
+  --parents /mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl
+vision-jev data-build-final \
+  --public /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl \
+  --api-candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl
 ```
 
 Every JSONL row is one complete question; candidates are never expanded into fake independent samples.
@@ -107,7 +119,7 @@ vision_jev/         Data, model, runtime, training, and evaluation code
 tests/              Unit and integration tests
 ```
 
-Raw data, checkpoints, credentials, and large run artifacts are excluded from Git. API configuration belongs in `configs/local/api.toml`; start from [configs/api.example.toml](configs/api.example.toml).
+Raw data, checkpoints, credentials, and large run artifacts are excluded from Git. API keys live only in the ignored, permission-restricted `configs/local/api_keys.toml`; the tracked code never logs or copies them.
 
 ## Roadmap
 
@@ -115,9 +127,9 @@ Raw data, checkpoints, credentials, and large run artifacts are excluded from Gi
 - [x] Build fixed-source download and canonical normalization pipelines
 - [x] Produce and validate the 90k public core manifest
 - [x] Validate the five-source public extension pilot
-- [ ] Materialize the full GUI-Odyssey training subset
-- [ ] Freeze and validate the 117k public manifest
-- [ ] Produce 3k program-verified, same-language API rewrites
+- [x] Materialize the full GUI-Odyssey training subset
+- [x] Freeze and validate the 117k public manifest
+- [x] Produce 3k program-verified, same-language API rewrites
 - [ ] Integrate the native Qwen3.5-0.8B processor and backbone
 - [ ] Complete small-batch overfitting and the 12k SFT pilot
 - [ ] Train and evaluate the 120k SFT model

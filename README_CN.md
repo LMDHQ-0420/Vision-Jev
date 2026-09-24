@@ -89,6 +89,18 @@ vision-jev data-normalize visual7w
 vision-jev data-build-public \
   --mixture configs/data/sft_120k.json \
   --output /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl
+vision-jev data-rewrite-api \
+  --input /mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl \
+  --output /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
+  --choice 2200 --noul 1100 --provider kimi \
+  --minimum-choice 2000 --minimum-noul 1000 \
+  --group-size 60 --min-interval-seconds 21
+vision-jev data-audit-rewrites \
+  --candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
+  --parents /mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl
+vision-jev data-build-final \
+  --public /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl \
+  --api-candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl
 ```
 
 每行 JSONL 代表一道完整问题，不会把 K 个候选拆成 K 条虚假样本。
@@ -106,7 +118,7 @@ vision_jev/         数据、模型、运行时、训练和评测代码
 tests/              单元测试与集成测试
 ```
 
-原始数据、checkpoint、密钥和大型运行产物不会提交 Git。API 配置放在 `configs/local/api.toml`，模板见 [configs/api.example.toml](configs/api.example.toml)。
+原始数据、checkpoint、密钥和大型运行产物不会提交 Git。API 密钥只放在被 Git 忽略且限制文件权限的 `configs/local/api_keys.toml`；仓库代码不会打印或复制密钥。
 
 ## TODO / Roadmap
 
@@ -114,9 +126,9 @@ tests/              单元测试与集成测试
 - [x] 完成固定来源下载与 canonical 转换管线
 - [x] 生成并验证 90k 公开核心清单
 - [x] 验证新五来源联合 pilot
-- [ ] 完成 GUI-Odyssey 正式训练子集截图物化
-- [ ] 冻结并验证 117k 公开数据 manifest
-- [ ] 生成 3k 程序验证的同语言 API 改写数据
+- [x] 完成 GUI-Odyssey 正式训练子集截图物化
+- [x] 冻结并验证 117k 公开数据 manifest
+- [x] 生成 3k 程序验证的同语言 API 改写数据
 - [ ] 接入 Qwen3.5-0.8B 原生 processor 和主干
 - [ ] 完成小批量过拟合与 12k SFT pilot
 - [ ] 训练并评测 120k SFT 模型

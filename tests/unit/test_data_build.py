@@ -6,10 +6,74 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from vision_jev.data.build import build_public_manifest
+from vision_jev.data.build import build_final_manifest, build_public_manifest
+
+
+def _valid_sample(sample_id: str, task: str, source: str = "public") -> dict[str, object]:
+    options = [] if task == "noul" else [{"id": "a", "text": "A"}, {"id": "b", "text": "B"}]
+    return {
+        "schema_version": 2,
+        "sample_id": sample_id,
+        "root_id": sample_id,
+        "group_id": sample_id,
+        "source": source,
+        "source_version": "pinned",
+        "source_bucket": "api_assisted" if source == "api_rewrite" else "public",
+        "license": "test",
+        "split": "train",
+        "task_type": task,
+        "state_text": "",
+        "question": "Is this a test?",
+        "image_metadata": {},
+        "allowed_history": [],
+        "input_track": "test",
+        "options": options,
+        "candidates": options,
+        "target_kind": "binary" if task == "noul" else "single",
+        "target": True if task == "noul" else "a",
+        "label_origin": "human",
+        "origin_label_method": "human",
+        "language": "en",
+        "generator_revision": "test",
+        "quality": {},
+        "teacher_only": False,
+    }
 
 
 class DataBuildTest(unittest.TestCase):
+    def test_final_manifest_selects_exact_api_task_quotas(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            public = root / "public.jsonl"
+            candidates = root / "candidates.jsonl"
+            config = root / "mixture.json"
+            destination = root / "final.jsonl"
+            public.write_text(json.dumps(_valid_sample("p:1", "choice")) + "\n")
+            api_rows = [
+                _valid_sample("a:1", "choice", "api_rewrite"),
+                _valid_sample("a:2", "choice", "api_rewrite"),
+                _valid_sample("a:3", "noul", "api_rewrite"),
+            ]
+            candidates.write_text("".join(json.dumps(row) + "\n" for row in api_rows))
+            config.write_text(
+                json.dumps(
+                    {
+                        "mixture_id": "test",
+                        "total_questions": 3,
+                        "blocks": {"api_assisted": {"choice": 1, "noul": 1}},
+                    }
+                )
+            )
+            report = build_final_manifest(
+                public_manifest=public,
+                api_candidates=candidates,
+                mixture_config=config,
+                destination=destination,
+                seed="seed",
+            )
+            self.assertEqual(report["total_questions"], 3)
+            self.assertEqual(report["api_task_counts"], {"choice": 1, "noul": 1})
+
     def test_streaming_selector_keeps_lowest_stable_hashes(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -31,11 +31,25 @@ vision-jev data-inventory
 vision-jev data-normalize multimodal_mind2web
 vision-jev data-build-public --mixture configs/data/sft_120k.json \
   --output /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl
+vision-jev data-rewrite-api \
+  --input /mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl \
+  --output /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
+  --choice 2200 --noul 1100 --provider kimi \
+  --minimum-choice 2000 --minimum-noul 1000 \
+  --group-size 60 --min-interval-seconds 21
+vision-jev data-audit-rewrites \
+  --candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
+  --parents /mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl
+vision-jev data-build-final \
+  --public /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl \
+  --api-candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl
 ```
 
 `data-build-public` 按固定 seed 和 `sample_id` 哈希排序，从每个 canonical train 池取得精确配额；实现使用按配额有界的 streaming heap，不把百万级来源整体载入内存。任一来源不足即写 `*.build-report.json` 并失败，不产出主 manifest；成功时记录最终 manifest SHA-256、题型和语言实测分布。
 
 正式管线不提供本地数据生成入口。停用的本地生成与 MiniWoB 数据已经清理；历史结论只保留在迭代文档中。新增 27k 必须来自已登记的公开数据集，只允许自动下载、格式转换、过滤、去重和抽样。
+
+API 改写只改写 `question`；图片、候选、`target`、题型、语言和上游标签原样继承。程序逐条拒绝空文本、原句照抄、数字/否定变化、语言漂移和异常长度；不同视觉样本可以合法共享通用任务题干，唯一性由 `sample_id` 保证。Kimi 低 RPM 账号使用 grouped 请求降低请求数，并在每个成功批次追加检查点；`data-build-final` 再按固定 seed 精确选取 2,000 Choice 与 1,000 Noul。密钥只从被 Git 忽略的 `configs/local/api_keys.toml` 读取。
 
 ## v2 来源门禁
 
@@ -53,4 +67,4 @@ vision-jev data-build-public --mixture configs/data/sft_120k.json \
 
 ## 七层质量流程
 
-结构与文件 → 视觉/坐标 → 标签语义 → 候选与目标 → 泄漏/PII → 去重与整组 split → 配额/分布。每次构建再抽 2% 人工审计；任何失败进入带原因的 quarantine，不静默丢弃。
+结构与文件 → 视觉/坐标 → 标签语义 → 候选与目标 → 泄漏/PII → 去重与整组 split → 配额/分布。构建时执行自动化全量校验和分层抽样报告；任何失败进入带原因的 quarantine，不静默丢弃，也不新增人工标注。

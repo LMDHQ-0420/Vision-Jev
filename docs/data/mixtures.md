@@ -4,6 +4,8 @@
 
 ## `sft-120k`
 
+构建已完成。最终 manifest 位于外部数据盘 `manifests/sft-120k.jsonl`，共 120,000 条、84,428 个 group，SHA-256 为 `d0ddde7a861f0e9588e6dff37156c3593c7c390747aca84b2fbe254b931f13c8`。public 117k 的 SHA-256 为 `5a3275395e9df1c78ec7a43fcaaabf7fbb540a8a80723eb1528916bcaeac851c`。
+
 | 数据块 | Choice | Noul | Score | 合计 |
 |---|---:|---:|---:|---:|
 | 公开来源 | 94,000 | 17,000 | 6,000 | 117,000 |

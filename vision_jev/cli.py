@@ -7,10 +7,17 @@ import json
 import os
 import shutil
 import sys
+from collections import Counter
 from pathlib import Path
 
+from vision_jev.api_keys import DEFAULT_API_KEYS_PATH, load_api_keys
 from vision_jev.data import DataValidationError, validate_jsonl
-from vision_jev.data.build import build_public_manifest
+from vision_jev.data.api_rewrite import (
+    audit_rewrites,
+    generate_rewrites,
+    select_parents,
+)
+from vision_jev.data.build import build_final_manifest, build_public_manifest
 from vision_jev.data.download import (
     download_source,
     inventory,
@@ -96,7 +103,10 @@ def data_download_weblinx_subset(args: argparse.Namespace) -> int:
 
 def data_download_gui_odyssey_subset(args: argparse.Namespace) -> int:
     report = materialize_gui_odyssey_subset(
-        args.data_root, target_rows=args.target_rows, seed=args.seed
+        args.data_root,
+        target_rows=args.target_rows,
+        seed=args.seed,
+        max_workers=args.max_workers,
     )
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0
@@ -125,6 +135,59 @@ def data_build_public(args: argparse.Namespace) -> int:
         return 2
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0
+
+
+def data_rewrite_api(args: argparse.Namespace) -> int:
+    if args.minimum_choice is not None and args.minimum_choice > args.choice:
+        raise ValueError("minimum-choice cannot exceed choice candidates")
+    if args.minimum_noul is not None and args.minimum_noul > args.noul:
+        raise ValueError("minimum-noul cannot exceed noul candidates")
+    keys = load_api_keys(args.api_keys)
+    parents = select_parents(args.input, choice=args.choice, noul=args.noul, seed=args.seed)
+    report = generate_rewrites(
+        parents,
+        keys=keys,
+        destination=args.output,
+        provider=args.provider,
+        max_attempts=args.max_attempts,
+        max_workers=args.max_workers,
+        group_size=args.group_size,
+        min_interval_seconds=args.min_interval_seconds,
+    )
+    print(json.dumps(report.__dict__, ensure_ascii=False, indent=2))
+    task_counts: Counter[str] = Counter()
+    if args.output.exists():
+        with args.output.open(encoding="utf-8") as handle:
+            for raw in handle:
+                if raw.strip():
+                    task_counts[str(json.loads(raw)["task_type"])] += 1
+    minimum_choice = args.minimum_choice if args.minimum_choice is not None else args.choice
+    minimum_noul = args.minimum_noul if args.minimum_noul is not None else args.noul
+    return (
+        0 if task_counts["choice"] >= minimum_choice and task_counts["noul"] >= minimum_noul else 2
+    )
+
+
+def data_build_final(args: argparse.Namespace) -> int:
+    try:
+        report = build_final_manifest(
+            public_manifest=args.public,
+            api_candidates=args.api_candidates,
+            mixture_config=args.mixture,
+            destination=args.output,
+            seed=args.seed,
+        )
+    except ValueError as exc:
+        print(f"final manifest build blocked: {exc}", file=sys.stderr)
+        return 2
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+def data_audit_rewrites(args: argparse.Namespace) -> int:
+    report = audit_rewrites(args.candidates, args.parents)
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0 if not report["invariant_violations"] else 2
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -182,6 +245,7 @@ def build_parser() -> argparse.ArgumentParser:
     gui_parser.add_argument("--data-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev"))
     gui_parser.add_argument("--target-rows", type=int, default=8500)
     gui_parser.add_argument("--seed", default="vision-jev-sft")
+    gui_parser.add_argument("--max-workers", type=int, default=8)
     gui_parser.set_defaults(func=data_download_gui_odyssey_subset)
     normalize_parser = sub.add_parser("data-normalize", help="convert raw data to canonical JSONL")
     normalize_parser.add_argument("source", choices=sorted(ADAPTERS))
@@ -204,6 +268,42 @@ def build_parser() -> argparse.ArgumentParser:
     )
     build_parser.add_argument("--seed", default="vision-jev-sft")
     build_parser.set_defaults(func=data_build_public)
+    rewrite_parser = sub.add_parser(
+        "data-rewrite-api", help="create checked same-language API question rewrites"
+    )
+    rewrite_parser.add_argument("--input", type=Path, required=True)
+    rewrite_parser.add_argument("--output", type=Path, required=True)
+    rewrite_parser.add_argument("--choice", type=int, required=True)
+    rewrite_parser.add_argument("--noul", type=int, required=True)
+    rewrite_parser.add_argument("--minimum-choice", type=int)
+    rewrite_parser.add_argument("--minimum-noul", type=int)
+    rewrite_parser.add_argument("--provider", choices=["kimi", "glm"], default="kimi")
+    rewrite_parser.add_argument("--max-attempts", type=int, default=3)
+    rewrite_parser.add_argument("--max-workers", type=int, default=4)
+    rewrite_parser.add_argument("--group-size", type=int, default=1)
+    rewrite_parser.add_argument("--min-interval-seconds", type=float, default=0.0)
+    rewrite_parser.add_argument("--seed", default="vision-jev-api-rewrite")
+    rewrite_parser.add_argument("--api-keys", type=Path, default=DEFAULT_API_KEYS_PATH)
+    rewrite_parser.set_defaults(func=data_rewrite_api)
+    final_parser = sub.add_parser(
+        "data-build-final", help="join exact public and API-assisted quotas"
+    )
+    final_parser.add_argument("--public", type=Path, required=True)
+    final_parser.add_argument("--api-candidates", type=Path, required=True)
+    final_parser.add_argument("--mixture", type=Path, default=Path("configs/data/sft_120k.json"))
+    final_parser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("/mnt/sda1/sol_data/vision-jev/manifests/sft-120k.jsonl"),
+    )
+    final_parser.add_argument("--seed", default="vision-jev-sft")
+    final_parser.set_defaults(func=data_build_final)
+    audit_parser = sub.add_parser(
+        "data-audit-rewrites", help="verify every API rewrite against its public parent"
+    )
+    audit_parser.add_argument("--candidates", type=Path, required=True)
+    audit_parser.add_argument("--parents", type=Path, required=True)
+    audit_parser.set_defaults(func=data_audit_rewrites)
     return parser
 
 
