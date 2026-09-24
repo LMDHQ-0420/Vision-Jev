@@ -1,5 +1,9 @@
 # Vision-JEV
 
+<p align="center">
+  <img src="asset/Vision-Jev.svg" alt="Vision-Jev 项目 Logo" width="720">
+</p>
+
 Vision-JEV 是一个面向动态候选决策的轻量视觉语言模型研究与教程仓库。项目的两条同等重要的主线是：
 
 1. 开源一个真正读取图像、状态、问题与动态候选的 Jev 风格模型；
