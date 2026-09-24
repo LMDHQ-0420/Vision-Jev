@@ -15,7 +15,7 @@ Environment name and location: `vision-jev`, `/home/sol/miniconda3/envs/vision-j
 | AndroidEnv | 1.3.0 |
 | WebLINX | installed from data extra |
 
-Validation: 11/11 tests passed; Ruff check and format passed; mypy strict passed for 16 source files; `pip check` found no broken requirements; repository check passed.
+Validation: 13/13 tests passed; Ruff check and format passed; mypy strict passed for 16 source files; `pip check` found no broken requirements; repository check passed.
 
 ## GPU verification
 

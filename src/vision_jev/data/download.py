@@ -297,8 +297,11 @@ def materialize_weblinx_subset(
     demo_names = sorted({item["demo"] for item in eligible})
     target = source_root / "snapshots" / "train_subset"
     token = os.environ.get("HF_TOKEN")
+
     def fetch_exact(filenames: list[str], stage: str) -> None:
         def fetch(filename: str) -> str:
+            if (target / filename).is_file():
+                return filename
             hf_hub_download(
                 repo_id="McGill-NLP/WebLINX-full",
                 repo_type="dataset",
@@ -323,18 +326,22 @@ def materialize_weblinx_subset(
         "replay metadata",
     )
 
-    mapped: list[dict[str, Any]] = []
+    by_demo: dict[str, list[dict[str, Any]]] = {}
     for item in eligible:
-        replay_path = target / "demonstrations" / item["demo"] / "replay.json"
+        by_demo.setdefault(str(item["demo"]), []).append(item)
+    mapped: list[dict[str, Any]] = []
+    for demo_name, demo_items in by_demo.items():
+        replay_path = target / "demonstrations" / demo_name / "replay.json"
         payload = json.loads(replay_path.read_text(encoding="utf-8"))["data"]
-        if item["turn"] < 0 or item["turn"] >= len(payload):
-            continue
-        turn = payload[item["turn"]]
-        state = turn.get("state") or {}
-        screenshot = state.get("screenshot")
-        if not screenshot or state.get("screenshot_status") != "good":
-            continue
-        mapped.append({**item, "screenshot": str(screenshot)})
+        for item in demo_items:
+            if item["turn"] < 0 or item["turn"] >= len(payload):
+                continue
+            turn = payload[item["turn"]]
+            state = turn.get("state") or {}
+            screenshot = state.get("screenshot")
+            if not screenshot or state.get("screenshot_status") != "good":
+                continue
+            mapped.append({**item, "screenshot": str(screenshot)})
 
     mapped.sort(
         key=lambda item: hashlib.sha256(f"{seed}:{item['demo']}:{item['turn']}".encode()).digest()
@@ -345,10 +352,7 @@ def materialize_weblinx_subset(
             f"WebLINX safe visual subset has {len(selected)} rows; requested {target_rows}"
         )
     screenshot_patterns = sorted(
-        {
-            f"demonstrations/{item['demo']}/screenshots/{item['screenshot']}"
-            for item in selected
-        }
+        {f"demonstrations/{item['demo']}/screenshots/{item['screenshot']}" for item in selected}
     )
     fetch_exact(screenshot_patterns, "screenshots")
 

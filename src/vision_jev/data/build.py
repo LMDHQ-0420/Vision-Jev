@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import heapq
 import json
 from collections import Counter
 from pathlib import Path
@@ -26,36 +27,52 @@ def build_public_manifest(
     task_quotas: dict[str, dict[str, int]] = config.get("public_source_task_quotas", {})
     selected: list[dict[str, Any]] = []
     availability: dict[str, int] = {}
+    excluded: dict[str, dict[str, int]] = {}
     shortages: dict[str, int] = {}
     for source, quota in quotas.items():
         path = data_root / "processed" / source / "canonical.jsonl"
-        rows: list[dict[str, Any]] = []
+        requested_tasks = task_quotas.get(source)
+        requested = requested_tasks or {"*": quota}
+        heaps: dict[str, list[tuple[int, str, int, dict[str, Any]]]] = {
+            task: [] for task in requested
+        }
+        task_availability: Counter[str] = Counter()
+        source_excluded: Counter[str] = Counter()
+        available = 0
         if path.exists():
             with path.open("r", encoding="utf-8") as handle:
-                for raw in handle:
+                for line_index, raw in enumerate(handle, start=1):
                     if not raw.strip():
                         continue
                     sample = json.loads(raw)
-                    if (
-                        sample["split"] != "train"
-                        or sample.get("teacher_only", False)
-                        or sample.get("quality", {}).get("release_blocked", False)
-                    ):
+                    if sample["split"] != "train":
+                        source_excluded["non_train"] += 1
                         continue
-                    rows.append(sample)
-        availability[source] = len(rows)
-        rows.sort(key=lambda sample: _rank(sample, f"{seed}:{source}"))
-        requested_tasks = task_quotas.get(source)
-        if requested_tasks:
-            for task, task_quota in requested_tasks.items():
-                task_rows = [row for row in rows if row["task_type"] == task]
-                if len(task_rows) < task_quota:
-                    shortages[f"{source}:{task}"] = task_quota - len(task_rows)
-                selected.extend(task_rows[:task_quota])
-        else:
-            if len(rows) < quota:
-                shortages[source] = quota - len(rows)
-            selected.extend(rows[:quota])
+                    if sample.get("teacher_only", False):
+                        source_excluded["teacher_only"] += 1
+                        continue
+                    if sample.get("quality", {}).get("release_blocked", False):
+                        source_excluded["release_blocked"] += 1
+                        continue
+                    available += 1
+                    task = str(sample["task_type"]) if requested_tasks else "*"
+                    task_availability[task] += 1
+                    if task not in heaps:
+                        continue
+                    rank = int.from_bytes(_rank(sample, f"{seed}:{source}"), "big")
+                    entry = (-rank, str(sample["sample_id"]), line_index, sample)
+                    task_quota = requested[task]
+                    if len(heaps[task]) < task_quota:
+                        heapq.heappush(heaps[task], entry)
+                    elif entry > heaps[task][0]:
+                        heapq.heapreplace(heaps[task], entry)
+        availability[source] = available
+        excluded[source] = dict(source_excluded)
+        for task, task_quota in requested.items():
+            if task_availability[task] < task_quota:
+                key = f"{source}:{task}" if requested_tasks else source
+                shortages[key] = task_quota - task_availability[task]
+            selected.extend(entry[3] for entry in heaps[task])
 
     report = {
         "schema_version": 1,
@@ -63,6 +80,7 @@ def build_public_manifest(
         "seed": seed,
         "requested": quotas,
         "available_train": availability,
+        "excluded": excluded,
         "shortages": shortages,
         "selected_questions": len(selected),
         "task_counts": dict(Counter(sample["task_type"] for sample in selected)),

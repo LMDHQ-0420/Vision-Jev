@@ -642,6 +642,13 @@ PII_PATTERN = re.compile(
 )
 
 
+def sanitize_weblinx_candidate_text(value: str) -> str:
+    normalized = " ".join(value.split())[:256]
+    if PII_PATTERN.search(normalized):
+        return "sensitive text redacted"
+    return normalized or "visible webpage element"
+
+
 def normalize_weblinx(data_root: Path, destination: Path) -> int:
     import pandas as pd  # type: ignore[import-untyped]
 
@@ -671,11 +678,13 @@ def normalize_weblinx(data_root: Path, destination: Path) -> int:
             if width <= 0 or height <= 0:
                 continue
             text_match = re.search(r"\[\[text\]\]\s*(.*?)\s*\[\[bbox\]\]", part)
-            visible_text = " ".join((text_match.group(1) if text_match else "").split())[:256]
+            visible_text = sanitize_weblinx_candidate_text(
+                text_match.group(1) if text_match else ""
+            )
             parsed.append(
                 {
                     "id": f"element:{uid_match.group(1)}",
-                    "text": visible_text or "visible webpage element",
+                    "text": visible_text,
                     "box": [x, y, x + width, y + height],
                     "action_spec": {"type": intent},
                 }
