@@ -14,7 +14,7 @@ docs/
   experiments/           每次代码迭代的人类可读账本
   decisions/             不可轻易逆转的 ADR
   release/               模型卡模板与发布门禁
-src/vision_jev/
+vision_jev/
   data/                   适配、验证、整题 collator
   model/                  VLM 适配、决策头、loss、区域映射
   runtime/                参考/共享执行、缓存身份、API

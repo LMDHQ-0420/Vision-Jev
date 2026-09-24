@@ -103,7 +103,7 @@ data/               Schemas, public examples, and source metadata
 docs/               Architecture, data, training, evaluation, and release guides
 runs/               Immutable run metadata and external artifact references
 scripts/            Repository and resource checks
-src/vision_jev/     Data, model, runtime, training, and evaluation code
+vision_jev/         Data, model, runtime, training, and evaluation code
 tests/              Unit and integration tests
 ```
 

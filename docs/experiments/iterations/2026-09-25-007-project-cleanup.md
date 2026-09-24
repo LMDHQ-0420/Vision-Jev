@@ -12,6 +12,7 @@
 - 删除 `CONTRIBUTING.md`、`SECURITY.md`、停用的本地数据生成实现及其测试。
 - 从正式依赖中移除 MiniWoB++ 和 Selenium，包标识不再使用开发版后缀。
 - 活动配置和 CLI 默认路径使用稳定名称；数据 schema 版本和上游 revision 继续保留用于复现。
+- Python 包直接位于仓库根目录 `vision_jev/`，不增加额外源码嵌套层。
 
 ## 数据清理
 

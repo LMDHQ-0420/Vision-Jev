@@ -25,7 +25,7 @@ from vision_jev.tracking import create_run, finalize_run
 def _root() -> Path:
     current = Path.cwd().resolve()
     for candidate in (current, *current.parents):
-        if (candidate / "pyproject.toml").exists() and (candidate / "src" / "vision_jev").exists():
+        if (candidate / "pyproject.toml").exists() and (candidate / "vision_jev").exists():
             return candidate
     raise RuntimeError("run inside the Vision-JEV repository")
 

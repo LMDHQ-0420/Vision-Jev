@@ -38,7 +38,8 @@ dev = ["pytest>=8.3", "ruff>=0.12", "mypy>=1.16", "pre-commit>=4.2"]
 vision-jev = "vision_jev.cli:main"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
+include = ["vision_jev*"]
 
 [tool.ruff]
 line-length = 100
