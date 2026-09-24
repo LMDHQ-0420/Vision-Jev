@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "model_id": "Qwen/Qwen3.5-0.8B",
+  "model_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+  "processor_revision": "2fc06364715b967f1860aea9cf38778875588b17",
+  "native_processor": true,
+  "hidden_size": 1024,
+  "head_width": 256,
+  "set_attention_layers": 1,
+  "set_attention_heads": 4,
+  "set_residual_scale_init": 0.1,
+  "lm_probability_features": false,
+  "region_branch": false,
+  "vision_frozen": true,
+  "image_token_target": 256,
+  "max_path_tokens": 2048
+}

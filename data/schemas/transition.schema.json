@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "R0 PPO transition",
+  "type": "object",
+  "required": ["episode_id", "step", "policy_revision", "candidate_ids", "action_index", "mask", "old_logp", "value", "reward", "terminated", "truncated", "observation_ref"],
+  "properties": {
+    "episode_id": {"type": "string"},
+    "step": {"type": "integer", "minimum": 0},
+    "policy_revision": {"type": "string"},
+    "candidate_ids": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "action_index": {"type": "integer", "minimum": 0},
+    "mask": {"type": "array", "items": {"type": "boolean"}},
+    "old_logp": {"type": "number"},
+    "reference_probs": {"type": "array", "items": {"type": "number"}},
+    "value": {"type": "number"},
+    "reward": {"type": "number"},
+    "terminated": {"type": "boolean"},
+    "truncated": {"type": "boolean"},
+    "observation_ref": {"type": "string"}
+  }
+}

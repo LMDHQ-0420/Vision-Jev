@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "stage": "sft_smoke",
+  "evidence_status": "planned",
+  "model_config": "configs/model/qwen35_08b.json",
+  "data_config": "configs/data/pilot_12k.json",
+  "max_questions": 200,
+  "epochs": 20,
+  "seed": 42,
+  "microbatch_questions": 1,
+  "global_batch_questions": 8,
+  "head_learning_rate": 0.0001,
+  "backbone_learning_rate": 0.0,
+  "bf16": true
+}

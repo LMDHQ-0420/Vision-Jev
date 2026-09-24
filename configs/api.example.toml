@@ -1,0 +1,22 @@
+# Copy to configs/local/api.toml. The local directory is git-ignored.
+# Prefer environment variables over literal secrets.
+
+[huggingface]
+base_url = "https://huggingface.co"
+api_key_env = "HF_TOKEN"
+
+[openai_compatible]
+base_url = "https://api.openai.com/v1"
+api_key_env = "OPENAI_API_KEY"
+model = ""
+
+[teacher]
+base_url = ""
+api_key_env = "VISION_JEV_TEACHER_API_KEY"
+model = ""
+request_timeout_seconds = 120
+max_retries = 5
+
+[proxy]
+http_proxy_env = "HTTP_PROXY"
+https_proxy_env = "HTTPS_PROXY"

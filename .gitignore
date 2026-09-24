@@ -1,0 +1,33 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+dist/
+build/
+*.egg-info/
+
+# Local datasets, weights, traces, and generated artifacts
+data/raw/
+data/interim/
+data/processed/
+checkpoints/
+artifacts/*
+!artifacts/.gitkeep
+runs/*
+!runs/.gitkeep
+!runs/README.md
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+
+# Local credentials and machine-specific API configuration
+.env
+.env.*
+!.env.example
+configs/local/
+secrets/

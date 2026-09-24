@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "stage": "ppo_r0",
+  "evidence_status": "planned",
+  "representation_frozen": true,
+  "belief_heads_frozen": true,
+  "transitions": 200000,
+  "smoke_transitions": 20000,
+  "parallel_envs": 8,
+  "rollout_steps_per_env": 64,
+  "ppo_epochs": 4,
+  "minibatch": 64,
+  "actor_learning_rate": 0.0001,
+  "value_learning_rate": 0.0001,
+  "clip_range": 0.2,
+  "gamma": 0.99,
+  "gae_lambda": 0.95,
+  "value_coefficient": 0.5,
+  "entropy_coefficient": 0.01,
+  "reference_kl_coefficient": 0.01,
+  "reward": {"success": 1.0, "failure": -0.2, "step": -0.002, "invalid": -0.05}
+}

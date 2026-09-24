@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vision-jev.local/schemas/sample-v1.json",
+  "title": "Vision-JEV complete-question sample",
+  "type": "object",
+  "required": ["schema_version", "sample_id", "group_id", "source", "source_version", "license", "split", "task_type", "state_text", "question", "options", "target_kind", "target", "label_origin", "language"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "sample_id": {"type": "string", "minLength": 1},
+    "group_id": {"type": "string", "minLength": 1},
+    "source": {"type": "string", "minLength": 1},
+    "source_version": {"type": "string", "minLength": 1},
+    "license": {"type": "string", "minLength": 1},
+    "split": {"enum": ["train", "dev", "calibration", "test"]},
+    "task_type": {"enum": ["choice", "noul", "score"]},
+    "image": {"type": ["string", "null"]},
+    "state_text": {"type": "string"},
+    "question": {"type": "string", "minLength": 1},
+    "options": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "text": {"type": "string", "minLength": 1},
+          "box": {"type": "array", "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"},{"type":"number"}], "minItems": 4, "maxItems": 4}
+        },
+        "additionalProperties": false
+      }
+    },
+    "target_kind": {"enum": ["single", "multiple", "binary", "distribution"]},
+    "target": {},
+    "label_origin": {"enum": ["human", "programmatic", "teacher_only", "human_or_program"]},
+    "language": {"type": "string", "minLength": 2},
+    "evidence_reference": {"type": ["string", "null"]},
+    "generator_version": {"type": ["string", "null"]},
+    "proposal_kind": {"enum": ["none", "oracle", "detector", "dom", "environment"]}
+  },
+  "additionalProperties": true
+}

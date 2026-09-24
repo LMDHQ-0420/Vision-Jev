@@ -1,0 +1,9 @@
+name: vision-jev
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.11
+  - pip>=24
+  - pip:
+      - -e .[data,dev,train,rl]

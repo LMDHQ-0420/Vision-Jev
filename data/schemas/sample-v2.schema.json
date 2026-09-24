@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vision-jev.local/schemas/sample-v2.json",
+  "title": "Vision-JEV v2 complete-question sample",
+  "type": "object",
+  "required": [
+    "schema_version", "sample_id", "root_id", "group_id", "source", "source_version",
+    "source_bucket", "license", "split", "task_type", "image", "image_metadata",
+    "state_text", "question", "allowed_history", "input_track", "options", "candidates",
+    "target_kind", "target", "label_origin", "origin_label_method", "language",
+    "generator_revision", "quality", "teacher_only"
+  ],
+  "properties": {
+    "schema_version": {"const": 2},
+    "sample_id": {"type": "string", "minLength": 1},
+    "root_id": {"type": "string", "minLength": 1},
+    "group_id": {"type": "string", "minLength": 1},
+    "source": {"type": "string", "minLength": 1},
+    "source_version": {"type": "string", "minLength": 1},
+    "source_bucket": {"enum": ["public", "programmatic", "verified_augmentation"]},
+    "license": {"type": "string", "minLength": 1},
+    "split": {"enum": ["train", "dev", "calibration", "test"]},
+    "task_type": {"enum": ["choice", "noul", "score"]},
+    "image": {"type": ["string", "null"]},
+    "image_metadata": {"type": "object"},
+    "state_text": {"type": "string"},
+    "question": {"type": "string", "minLength": 1},
+    "allowed_history": {"type": "array"},
+    "input_track": {"type": "string", "minLength": 1},
+    "options": {"$ref": "#/$defs/candidates"},
+    "candidates": {"$ref": "#/$defs/candidates"},
+    "target_kind": {"enum": ["single", "multiple", "binary", "distribution"]},
+    "target": {},
+    "label_origin": {"enum": ["human", "programmatic", "human_or_program"]},
+    "origin_label_method": {"type": "string", "minLength": 1},
+    "language": {"type": "string", "minLength": 2},
+    "generator_revision": {"type": "string", "minLength": 1},
+    "quality": {"type": "object"},
+    "teacher_only": {"const": false},
+    "proposal_kind": {"enum": ["none", "oracle", "detector", "dom", "accessibility_tree", "environment"]}
+  },
+  "$defs": {
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "text": {"type": "string", "minLength": 1},
+          "box": {"type": "array", "prefixItems": [{"type":"number"},{"type":"number"},{"type":"number"},{"type":"number"}], "minItems": 4, "maxItems": 4},
+          "action_spec": {"type": "object"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

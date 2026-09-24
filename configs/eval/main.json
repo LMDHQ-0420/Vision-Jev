@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "evidence_status": "planned",
+  "paired_seeds": true,
+  "quick_episodes": 300,
+  "final_episodes": 1000,
+  "candidate_k_slices": [2, 4, 8, 16, 32, 64],
+  "visual_token_slices": [128, 256, 512],
+  "latency_percentiles": [50, 95],
+  "warmup_steps": 20,
+  "timed_steps": 200,
+  "report_calibration": true,
+  "report_failure_slices": true
+}

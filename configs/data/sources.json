@@ -1,0 +1,98 @@
+{
+  "schema_version": 2,
+  "plan": "VisJev_Data_Plan_v2.0",
+  "reviewed_at": "2026-09-24",
+  "sources": [
+    {
+      "id": "multimodal_mind2web", "active": true, "priority": 1, "train_quota": 6000,
+      "homepage": "https://huggingface.co/datasets/osunlp/Multimodal-Mind2Web",
+      "license_status": "openrail_and_research_disclaimer",
+      "artifacts": [{"name":"dataset","kind":"hf_snapshot","repo_id":"osunlp/Multimodal-Mind2Web","revision":"1b4c6a8cf9f77b7a5e0d641959935c80c4a05889"}]
+    },
+    {
+      "id": "android_control", "active": true, "priority": 1, "train_quota": 16000,
+      "homepage": "https://github.com/google-research/google-research/tree/master/android_control",
+      "license_status": "official_research_dataset_terms_review_required",
+      "notes": "Pinned raw community mirror of the official GCS TFRecord release; verify hashes against gs://gresearch/android_control before release.",
+      "artifacts": [
+        {"name":"raw_tfrecords","kind":"hf_snapshot","repo_id":"leosltl/Android-Control","revision":"ca530e89dfc3b1a4c3d9bd30fd36be94536563b1"},
+        {"name":"official_splits","kind":"http","url":"https://storage.googleapis.com/gresearch/android_control/splits.json","bytes":98603,"extract":false},
+        {"name":"official_test_subsplits","kind":"http","url":"https://storage.googleapis.com/gresearch/android_control/test_subsplits.json","bytes":18414,"extract":false}
+      ]
+    },
+    {
+      "id": "weblinx", "active": true, "priority": 2, "train_quota": 6000,
+      "homepage": "https://huggingface.co/datasets/McGill-NLP/WebLINX-full",
+      "license_status": "cc-by-nc-sa-4.0_and_fair_use_research_only",
+      "notes": "Download the pinned train index first; a deterministic subset materializer fetches only selected demonstrations and never test assets.",
+      "artifacts": [
+        {"name":"splits","kind":"hf_file","repo_id":"McGill-NLP/WebLINX-full","filename":"splits.json","revision":"36ef9f79b43df50e25b7f3b68e5c9f6ccf4160e8"},
+        {"name":"train_index","kind":"hf_file","repo_id":"McGill-NLP/WebLINX-full","filename":"data/train.csv","revision":"36ef9f79b43df50e25b7f3b68e5c9f6ccf4160e8"}
+      ]
+    },
+    {
+      "id": "gqa", "active": true, "priority": 1, "train_quota": 18000,
+      "homepage": "https://cs.stanford.edu/people/dorarad/gqa/download.html",
+      "license_status": "source_terms_and_underlying_images_require_review",
+      "artifacts": [
+        {"name":"scene_graphs","kind":"http","url":"https://downloads.cs.stanford.edu/nlp/data/gqa/sceneGraphs.zip","extract":true},
+        {"name":"questions","kind":"http","url":"https://downloads.cs.stanford.edu/nlp/data/gqa/questions1.2.zip","extract":true},
+        {"name":"images","kind":"http","url":"https://downloads.cs.stanford.edu/nlp/data/gqa/images.zip","bytes":21817965542,"extract":true}
+      ]
+    },
+    {
+      "id": "refcoco", "active": true, "priority": 1, "train_quota": 18000,
+      "homepage": "https://github.com/lichengunc/refer", "license_status": "official_server_broken_mirror_recorded",
+      "notes": "Mirrored annotations; images reuse COCO train2014. Keep oracle/detector tracks separate and use UMD split for RefCOCOg.",
+      "artifacts": [
+        {"name":"refcoco","kind":"hf_snapshot","repo_id":"jxu124/refcoco","revision":"9fba8200c5326e996f789191f095bd464ef1d09e"},
+        {"name":"refcocog","kind":"hf_snapshot","repo_id":"jxu124/refcocog","revision":"55319436ad54b9480cefda6b9d64397de92456dd"},
+        {"name":"refcocoplus","kind":"hf_snapshot","repo_id":"jxu124/refcocoplus","revision":"12e20b0b6039fbf656e89e2f26597e84c1037847"}
+      ]
+    },
+    {
+      "id": "vqav2", "active": true, "priority": 2, "train_quota": 8000,
+      "homepage": "https://visualqa.org/download.html", "license_status": "images_and_annotations_require_separate_review",
+      "artifacts": [
+        {"name":"questions_train","kind":"http","url":"https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Questions_Train_mscoco.zip","extract":true},
+        {"name":"questions_val","kind":"http","url":"https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Questions_Val_mscoco.zip","extract":true},
+        {"name":"annotations_train","kind":"http","url":"https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Annotations_Train_mscoco.zip","extract":true},
+        {"name":"annotations_val","kind":"http","url":"https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Annotations_Val_mscoco.zip","extract":true},
+        {"name":"coco_train2014","kind":"http","url":"https://s3.amazonaws.com/images.cocodataset.org/zips/train2014.zip","bytes":13510573713,"extract":true,"shared_as":"coco/train2014"},
+        {"name":"coco_val2014","kind":"http","url":"https://s3.amazonaws.com/images.cocodataset.org/zips/val2014.zip","bytes":6645013297,"extract":true,"shared_as":"coco/val2014"}
+      ]
+    },
+    {
+      "id": "textvqa", "active": true, "priority": 2, "train_quota": 6000,
+      "homepage": "https://textvqa.org/dataset/", "license_status": "cc-by-4.0",
+      "artifacts": [
+        {"name":"train_annotations","kind":"http","url":"https://dl.fbaipublicfiles.com/textvqa/data/TextVQA_0.5.1_train.json","extract":false},
+        {"name":"val_annotations","kind":"http","url":"https://dl.fbaipublicfiles.com/textvqa/data/TextVQA_0.5.1_val.json","extract":false},
+        {"name":"test_annotations","kind":"http","url":"https://dl.fbaipublicfiles.com/textvqa/data/TextVQA_0.5.1_test.json","extract":false},
+        {"name":"train_val_images","kind":"http","url":"https://dl.fbaipublicfiles.com/textvqa/images/train_val_images.zip","extract":true},
+        {"name":"test_images","kind":"http","url":"https://dl.fbaipublicfiles.com/textvqa/images/test_images.zip","extract":true}
+      ]
+    },
+    {
+      "id": "chartqa", "active": true, "priority": 2, "train_quota": 6000,
+      "homepage": "https://github.com/vis-nlp/ChartQA", "license_status": "gpl-3.0_dataset_repo_review_required_for_redistribution",
+      "artifacts": [{"name":"dataset","kind":"hf_snapshot","repo_id":"ahmed-masry/ChartQA","revision":"af8b6f5c08c95085271561c2a3f9d15f2b5a9031"}]
+    },
+    {
+      "id": "clevr", "active": true, "priority": 3, "train_quota": 4000,
+      "homepage": "https://cs.stanford.edu/people/jcjohns/clevr/", "license_status": "cc-by-4.0",
+      "artifacts": [{"name":"clevr_v1","kind":"http","url":"https://dl.fbaipublicfiles.com/clevr/CLEVR_v1.0.zip","extract":true}]
+    },
+    {
+      "id": "multi_nli", "active": true, "priority": 3, "train_quota": 2000,
+      "homepage": "https://huggingface.co/datasets/nyu-mll/multi_nli", "license_status": "mixed_cc-by-3.0_cc-by-sa-3.0_mit_review_required",
+      "artifacts": [{"name":"dataset","kind":"hf_snapshot","repo_id":"nyu-mll/multi_nli","revision":"da70db2af9d09693783c3320c4249840212ee221"}]
+    },
+    {
+      "id": "sst", "active": false, "train_quota": 0,
+      "deprecated_reason": "Removed from the v2 main mixture; retained only for provenance of the already-downloaded snapshot.",
+      "homepage": "https://huggingface.co/datasets/stanfordnlp/sst", "license_status": "unknown_block_redistribution_until_reviewed",
+      "artifacts": [{"name":"dataset","kind":"hf_snapshot","repo_id":"stanfordnlp/sst","revision":"82523085b89b96509979ffe069ebb3075b0692a5"}]
+    }
+  ]
+}

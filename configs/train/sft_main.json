@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "stage": "sft_main",
+  "evidence_status": "planned",
+  "model_config": "configs/model/qwen35_08b.json",
+  "data_config": "configs/data/sft_120k.json",
+  "questions": 120000,
+  "epochs": 2,
+  "seed": 42,
+  "microbatch_questions_per_device": 1,
+  "global_batch_questions": 64,
+  "lora_rank": 16,
+  "lora_alpha": 32,
+  "lora_dropout": 0.05,
+  "head_learning_rate": 0.0001,
+  "backbone_learning_rate": 0.00003,
+  "weight_decay": 0.01,
+  "warmup_ratio": 0.03,
+  "gradient_clip": 1.0,
+  "bf16": true,
+  "probability_dtype": "float32",
+  "gradient_checkpointing": true
+}

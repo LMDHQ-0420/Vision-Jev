@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "data_root": "/mnt/sda1/sol_data/vision-jev",
+  "raw_dir": "raw",
+  "staging_dir": "staging",
+  "processed_dir": "processed",
+  "manifests_dir": "manifests",
+  "state_dir": "_state",
+  "cache_dir": "_cache"
+}

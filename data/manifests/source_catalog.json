@@ -1,0 +1,22 @@
+{
+  "schema_version": 2,
+  "status": "download_in_progress_not_training_ready",
+  "plan": "VisJev_Data_Plan_v2.0",
+  "last_reviewed": "2026-09-24",
+  "source_of_truth": "configs/data/sources.json",
+  "data_root": "/mnt/sda1/sol_data/vision-jev",
+  "planned_public_train": 90000,
+  "sources": [
+    {"id":"multimodal_mind2web","planned_train":6000,"priority":1},
+    {"id":"android_control","planned_train":16000,"priority":1},
+    {"id":"weblinx","planned_train":6000,"priority":2},
+    {"id":"gqa","planned_train":18000,"priority":1},
+    {"id":"refcoco","planned_train":18000,"priority":1},
+    {"id":"vqav2","planned_train":8000,"priority":2},
+    {"id":"textvqa","planned_train":6000,"priority":2},
+    {"id":"chartqa","planned_train":6000,"priority":2},
+    {"id":"clevr","planned_train":4000,"priority":3},
+    {"id":"multi_nli","planned_train":2000,"priority":3}
+  ],
+  "excluded": [{"id":"sst","reason":"removed_from_v2_main_training"}]
+}

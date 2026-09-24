@@ -1,0 +1,40 @@
+{
+  "schema_version": 2,
+  "mixture_id": "sft-120k-v2",
+  "unit": "complete_question",
+  "total_questions": 120000,
+  "blocks": {
+    "public": {"questions": 90000, "choice": 76000, "noul": 14000, "score": 0},
+    "programmatic": {"questions": 24000, "choice": 16000, "noul": 2000, "score": 6000},
+    "verified_augmentation": {"questions": 6000, "choice": 4000, "noul": 2000, "score": 0}
+  },
+  "public_source_quotas": {
+    "multimodal_mind2web": 6000, "android_control": 16000, "weblinx": 6000,
+    "gqa": 18000, "refcoco": 18000, "vqav2": 8000, "textvqa": 6000,
+    "chartqa": 6000, "clevr": 4000, "multi_nli": 2000
+  },
+  "public_source_task_quotas": {
+    "multimodal_mind2web": {"choice": 6000},
+    "android_control": {"choice": 16000},
+    "weblinx": {"choice": 6000},
+    "gqa": {"choice": 10000, "noul": 8000},
+    "refcoco": {"choice": 18000},
+    "vqav2": {"choice": 3200, "noul": 4800},
+    "textvqa": {"choice": 4800, "noul": 1200},
+    "chartqa": {"choice": 6000},
+    "clevr": {"choice": 4000},
+    "multi_nli": {"choice": 2000}
+  },
+  "programmatic_quotas": {
+    "environment_action_demo": 8000, "candidate_set_comparison": 6000,
+    "visual_score": 6000, "known_uncertainty": 4000
+  },
+  "augmentation_quotas": {
+    "rewrite_or_chinese": 3000, "hard_candidates": 2000, "verified_counterfactual": 1000
+  },
+  "language_quotas": {"en": 102000, "zh": 18000},
+  "choice_k_distribution": {"2-4": 0.55, "5-8": 0.30, "9-16": 0.10, "17-32": 0.05},
+  "teacher_only_questions": 0,
+  "group_split": true,
+  "manifest": "data/manifests/sft-120k-v2.jsonl"
+}
