@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="asset/Vision-Jev.svg" alt="Vision-Jev" width="760">
-  <h3>面向动态候选判断与行动的开源视觉语言模型</h3>
-  <p>模型架构、训练代码、数据配额、评测流程与模型权重，全流程开放。</p>
+  <img src="asset/Vision-Jev.svg" alt="Vision-Jev" width="380">
+  <h3>一个支持视觉的开源 JEV-like 模型</h3>
+  <p>训练代码、数据配额、评测流程与模型权重，全流程开放。</p>
   <p><a href="README.md">English</a> · <a href="README_CN.md">简体中文</a> · <a href="docs/index.md">项目文档</a> · <a href="LICENSE">Apache-2.0</a></p>
 </div>
 
@@ -21,25 +21,11 @@ Vision-Jev 是一个面向**动态候选判断与行动**的开源视觉语言�
 
 ### 1. 训练一个开源 Vision-Jev
 
-模型由原生多模态基座、轻量判断头、候选集合交互和区域视觉证据组成。首个目标基座为 `Qwen/Qwen3.5-0.8B`，判断能力与策略优化相互分离。
+Vision-Jev 将视觉理解引入 JEV-like 模型范式，并完整开放从数据到模型权重的实现过程。
 
 ### 2. 开源完整训练链路
 
 项目将开放数据处理、精确配额、固定来源、确定性 manifest、SFT 与策略训练代码、评测协议、实验结果、模型权重、模型卡和数据卡。第三方原始数据继续遵守各自许可；本项目公开可复现的处理路径，不把上游资产声明为自有数据。
-
-## 模型结构
-
-```text
-图片 ─ 原生 processor ─ 视觉编码器 ─┐
-状态 + 问题 ─ tokenizer ─────────────┼─ 多模态主干
-动态候选 ─ serializer ──────────────┘       │
-                                      ┌──────┼──────┐
-                                   Choice  Noul  Score
-                                      │
-                               policy + value 分支
-```
-
-详见[系统架构](docs/architecture/system.md)和[接口契约](docs/architecture/interfaces.md)。
 
 ## 开放数据配方
 

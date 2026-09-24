@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="asset/Vision-Jev.svg" alt="Vision-Jev" width="760">
-  <h3>An open vision-language decision model for dynamic candidates</h3>
-  <p>Model architecture, training code, data recipe, evaluation protocol, and weights — developed in the open.</p>
+  <img src="asset/Vision-Jev.svg" alt="Vision-Jev" width="380">
+  <h3>An open vision-enabled JEV-like model</h3>
+  <p>Training code, data recipe, evaluation protocol, and weights — developed in the open.</p>
   <p><a href="README.md">English</a> · <a href="README_CN.md">简体中文</a> · <a href="docs/index.md">Documentation</a> · <a href="LICENSE">Apache-2.0</a></p>
   <p><img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white"> <img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-2.7%2B-EE4C2C?logo=pytorch&logoColor=white"> <img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-2ea44f"> <img alt="Status" src="https://img.shields.io/badge/status-data%20pipeline-f59e0b"></p>
 </div>
@@ -22,25 +22,11 @@ The same visual representation is designed to support a separate policy/value br
 
 ### Train an open Vision-Jev
 
-The model combines a native multimodal backbone with lightweight decision heads, optional candidate-set interaction, and region-aware visual evidence. The first target backbone is `Qwen/Qwen3.5-0.8B`; judgment and policy optimization remain separate.
+Vision-Jev brings visual understanding to the JEV-like modeling paradigm and is developed as an open model from data to weights.
 
 ### Open the complete training path
 
 The project will publish the data pipeline, exact quotas, source revisions, deterministic manifests, SFT and policy-training code, evaluation protocol, experiment evidence, model weights, and release cards. Third-party datasets retain their original licenses; this repository publishes the source ledger and reproducible processing path rather than claiming ownership of upstream assets.
-
-## Architecture
-
-```text
-image ─ native processor ─ vision encoder ─┐
-state + question ─ tokenizer ──────────────┼─ multimodal backbone
-dynamic candidates ─ serializer ──────────┘          │
-                                         ┌────────────┼────────────┐
-                                      Choice        Noul        Score
-                                         │
-                                  policy + value branch
-```
-
-See the [system architecture](docs/architecture/system.md) and [interface contract](docs/architecture/interfaces.md).
 
 ## Open data recipe
 
