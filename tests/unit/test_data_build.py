@@ -77,8 +77,8 @@ class DataBuildTest(unittest.TestCase):
             self.assertEqual(sum(quota.values()), config["public_source_quotas"][source])
             for task, count in quota.items():
                 task_totals[task] = task_totals.get(task, 0) + count
-        self.assertEqual(source_total, 90000)
-        self.assertEqual(task_totals, {"choice": 76000, "noul": 14000})
+        self.assertEqual(source_total, 117000)
+        self.assertEqual(task_totals, {"choice": 94000, "noul": 17000, "score": 6000})
 
     def test_shortage_writes_report_and_does_not_publish_manifest(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

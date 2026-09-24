@@ -26,21 +26,16 @@ source registration → immutable raw hash → adapter → normalized JSONL
 vision-jev data-download --source multimodal_mind2web
 vision-jev data-download --source weblinx --no-extract
 vision-jev data-download-weblinx-subset --target-rows 7000
+vision-jev data-download-gui-odyssey-subset --target-rows 8500
 vision-jev data-inventory
 vision-jev data-normalize multimodal_mind2web
 vision-jev data-build-public --mixture configs/data/sft_120k.json \
-  --output /mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl
-vision-jev data-generate-local --pilot --samples-per-family 8 \
-  --output /mnt/sda1/sol_data/vision-jev/pilots/local-27k-v2.2-pilot.jsonl
-vision-jev data-generate-local --miniwob-pilot --samples-per-family 2 \
-  --output /mnt/sda1/sol_data/vision-jev/pilots/miniwob-v1-pilot.jsonl
-# pilot 验收后才运行全量：
-vision-jev data-generate-local
+  --output /mnt/sda1/sol_data/vision-jev/manifests/public-117k-v2.3.jsonl
 ```
 
 `data-build-public` 按固定 seed 和 `sample_id` 哈希排序，从每个 canonical train 池取得精确配额；实现使用按配额有界的 streaming heap，不把百万级来源整体载入内存。任一来源不足即写 `*.build-report.json` 并失败，不产出主 manifest；成功时记录最终 manifest SHA-256、题型和语言实测分布。
 
-`data-generate-local` 使用固定 seed 和确定性求解器生成本地视觉资产。全量输出严格检查 27k 总数、18k Choice/3k Noul/6k Score、Choice K 四档数量、图片存在性和 schema；困难候选与反事实继承父组并重新求解。`--pilot` 用于先覆盖全部规则族的小批质量检查。
+v2.3 不提供活动的本地数据生成入口。历史 `local-27k` 与 MiniWoB pilot 保留在数据盘和迭代记录中用于追溯，但明确排除在正式 canonical pool、manifest 和训练之外。新增 27k 必须来自已登记的公开数据集，只允许自动下载、格式转换、过滤、去重和抽样。
 
 ## v2 来源门禁
 
@@ -50,6 +45,11 @@ vision-jev data-generate-local
 - VQAv2/TextVQA：唯一答案主池需规范化后至少 8/10 一致，争议项写 quarantine manifest。
 - RefCOCO：oracle/detector 分 manifest 和指标；真实候选未召回目标时记录系统召回失败。
 - ChartQA：human/augmented 分开，表格仅 verifier；GQA 否定题做额外证据审计。
+- GUI-Odyssey：先按 episode 选取训练子集，再只物化对应截图；整条 episode 保持同组。
+- Visual7W：复用 COCO/Visual Genome 原图，按 original image ID 跨来源去重并整组划分。
+- ScienceQA：只取上游原生多模态训练题及其已有选项/标签，不使用解释文本生成新题。
+- NLVR：只使用许可清晰的原始 NLVR；同一 presentation 的六张排列图不得跨 split。
+- KonIQ-10k：保留原始 c1-c5 分布，映射为五级序数 Score；不把 MOS 伪装为模型成功率。
 
 ## 七层质量流程
 

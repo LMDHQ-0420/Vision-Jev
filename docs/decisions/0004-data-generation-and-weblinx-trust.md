@@ -1,5 +1,7 @@
 # ADR-0004：WebLINX 信任与零新增人工标注
 
+> 其中“27k 本地生成”部分已由 ADR-0005 取代；WebLINX、语言和 `task_family` 决策仍有效。
+
 - 状态：accepted
 - 日期：2026-09-24
 - 取代：ADR-0003 中的 WebLINX PII 门禁、固定中英文配额和增强语言策略

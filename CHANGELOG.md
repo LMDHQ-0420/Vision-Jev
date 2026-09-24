@@ -14,3 +14,11 @@
 - CLEVR 标签来源修正为程序生成，公共 90k manifest 默认输出升级为 v2.2。
 - 新增确定性 `data-generate-local` 管线：视觉网格/GUI/集合比较/Score/信息充分性及求解器验证的困难候选、反事实；支持小批 pilot 后再运行 27k 全量。
 - 固定并验证 MiniWoB++ 官方环境，新增真实截图、DOM 候选和环境奖励共同校验的 MiniWoB++ pilot 入口。
+- 数据策略 v2.3：停止本地生成，原 27k 配额由 GUI-Odyssey、Visual7W、ScienceQA、NLVR、KonIQ-10k 五个公开数据集替代；117k 公开数据自动处理、3k API 同语言改写、0 项目人工标注。
+- 从活动 CLI 移除 `data-generate-local`，历史 pilot 仅保留作实验追溯且不进入正式训练清单。
+- 新增原始 NLVR canonical 适配器；保留六个官方图像排列并共享 statement group，实测转换 80,394 条且图片/schema 校验通过。
+- 新增 Visual7W pointing canonical 适配器，使用上游四候选框、确定性打乱答案位置并按原图分组；实测转换 188,068 条且答案位置近似均匀。
+- 新增 ScienceQA 原生多模态题 canonical 适配器；排除 lecture/solution 防止答案泄漏，实测转换 10,332 条且图片/schema 校验通过。
+- 新增 GUI-Odyssey 聚合标注、官方路径索引和选择性截图物化管线；64 条公开数据 pilot 转换通过，并修复候选大小写捷径。
+- 新增 KonIQ-10k 五级相对质量 Score 适配器；由 train MOS 五等分位产生均衡序数目标，保留全部上游评分统计。
+- 新增五来源公开扩展组合 pilot 配置；实测构建 1,964 条且来源、题型、图片和 schema 配额全部通过。

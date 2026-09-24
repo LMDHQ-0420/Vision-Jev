@@ -18,7 +18,7 @@ Vision-JEV 的产品形态不是自由生成聊天模型，而是视觉条件下
 | 阶段 | 工作 | 退出条件 |
 |---|---|---|
 | S0/M0 | 原生处理器契约、schema、合成头测试 | 无答案泄漏，三类输出合法 |
-| S1/M1 | 完成 v2 来源下载/转换，冻结主干头部预热、50–200 过拟合、12k pilot | 90k/24k/6k 结构与泄漏门禁通过，loss/目标映射正确 |
+| S1/M1 | 完成 v2.3 来源下载/转换，冻结主干头部预热、50–200 过拟合、12k pilot | 117k 公开数据与 3k API 改写结构、许可和泄漏门禁通过，loss/目标映射正确 |
 | S2/M2 | LoRA + 头；隐藏、LM、集合、区域对照 | 同预算结果及失败子集齐全 |
 | S3/M3 | 共享前缀推理 | 独立/共享数值等价，缓存隔离，实测有收益 |
 | S4/M4 | 120k × 2、独立校准 | 多来源、概率、显存与最坏 shape 审计通过 |
@@ -33,5 +33,5 @@ LM 特征去除退化则保留混合对照；集合层无稳定增益则默认�
 
 1. Mind2Web、AndroidControl、RefCOCO、GQA 小样本先跑通适配与泄漏测试。
 2. WebLINX、TextVQA、ChartQA 完成原始视觉资产与表格验证；WebLINX 直接采用上游开源内容。
-3. 构建程序环境、视觉 Score、已知不确定性，再加入经验证的强模型增强。
+3. 下载并转换 GUI-Odyssey、Visual7W、ScienceQA、NLVR 与 KonIQ-10k，替代全部本地生成配额。
 4. 冻结 train/dev/calibration/audit/test 的 root/group 分配，然后生成 pilot 与主 manifest。

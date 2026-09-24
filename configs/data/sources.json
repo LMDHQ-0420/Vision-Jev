@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
-  "plan": "VisJev_Data_Plan_v2.0",
-  "reviewed_at": "2026-09-24",
+  "plan": "VisJev_Data_Plan_v2.3-public-extension",
+  "reviewed_at": "2026-09-25",
   "sources": [
     {
       "id": "multimodal_mind2web", "active": true, "priority": 1, "train_quota": 6000,
@@ -87,6 +87,57 @@
       "id": "multi_nli", "active": true, "priority": 3, "train_quota": 2000,
       "homepage": "https://huggingface.co/datasets/nyu-mll/multi_nli", "license_status": "mixed_cc-by-3.0_cc-by-sa-3.0_mit_review_required",
       "artifacts": [{"name":"dataset","kind":"hf_snapshot","repo_id":"nyu-mll/multi_nli","revision":"da70db2af9d09693783c3320c4249840212ee221"}]
+    },
+    {
+      "id": "gui_odyssey", "active": true, "priority": 1, "train_quota": 8000,
+      "homepage": "https://huggingface.co/datasets/OpenGVLab/GUI-Odyssey",
+      "license_status": "cc-by-4.0",
+      "notes": "Download the pinned aggregate annotation file first. Screenshots are materialized only for selected train episodes; group by episode and device/app context.",
+      "artifacts": [
+        {"name":"annotations","kind":"hf_file","repo_id":"OpenGVLab/GUI-Odyssey","filename":"all_anno.json","revision":"71e0e7e2d169c642e7a99c264d82ffecadf67889"},
+        {"name":"random_split","kind":"hf_file","repo_id":"OpenGVLab/GUI-Odyssey","filename":"splits/random_split.json","revision":"71e0e7e2d169c642e7a99c264d82ffecadf67889"}
+      ]
+    },
+    {
+      "id": "visual7w", "active": true, "priority": 1, "train_quota": 6000,
+      "homepage": "https://github.com/yukezhu/visual7w-toolkit",
+      "license_status": "toolkit_mit_annotations_and_underlying_coco_vg_terms_review_required",
+      "notes": "Use the official pointing annotations and images. Deduplicate and split by original image ID.",
+      "artifacts": [
+        {"name":"pointing_annotations","kind":"http","url":"https://ai.stanford.edu/~yukez/papers/resources/dataset_v7w_pointing.zip","bytes":12040473,"extract":true},
+        {"name":"images","kind":"http","url":"http://vision.stanford.edu/yukezhu/visual7w_images.zip","bytes":1860148318,"extract":true}
+      ]
+    },
+    {
+      "id": "scienceqa", "active": true, "priority": 2, "train_quota": 4000,
+      "homepage": "https://github.com/lupantech/ScienceQA",
+      "license_status": "cc-by-nc-sa-4.0",
+      "notes": "Only original multimodal training questions with existing options/labels are eligible. Preserve source language and group by upstream question/image.",
+      "artifacts": [
+        {"name":"repository","kind":"http","url":"https://github.com/lupantech/ScienceQA/archive/2cbf8318e07b9ece895bb2ae605e71e38d623264.zip","bytes":21923671,"extract":true},
+        {"name":"train_images","kind":"http","url":"https://scienceqa.s3.us-west-1.amazonaws.com/images/train.zip","bytes":628681062,"extract":true},
+        {"name":"val_images","kind":"http","url":"https://scienceqa.s3.us-west-1.amazonaws.com/images/val.zip","bytes":209680739,"extract":true},
+        {"name":"test_images","kind":"http","url":"https://scienceqa.s3.us-west-1.amazonaws.com/images/test.zip","bytes":206009461,"extract":true}
+      ]
+    },
+    {
+      "id": "nlvr", "active": true, "priority": 2, "train_quota": 3000,
+      "homepage": "https://lil.nlp.cornell.edu/nlvr/",
+      "license_status": "cc-by-4.0",
+      "notes": "Use original NLVR, not NLVR2. Keep all six image permutations for a presentation in one group.",
+      "artifacts": [
+        {"name":"repository","kind":"http","url":"https://github.com/clic-lab/nlvr/archive/18924841aa96d519cfb8584f0945350f07a6d860.zip","extract":true}
+      ]
+    },
+    {
+      "id": "koniq10k", "active": true, "priority": 2, "train_quota": 6000,
+      "homepage": "https://database.mmsp-kn.de/koniq-10k-database.html",
+      "license_status": "research_use_redistribution_review_required",
+      "notes": "Preserve upstream c1-c5/MOS and map train MOS quintiles to a five-level dataset-relative ordinal Score target; thresholds are train-only and recorded.",
+      "artifacts": [
+        {"name":"images_1024x768","kind":"http","url":"https://datasets.vqa.mmsp-kn.de/archives/koniq10k_1024x768.zip","bytes":5608799013,"extract":true},
+        {"name":"scores","kind":"http","url":"https://datasets.vqa.mmsp-kn.de/archives/koniq10k_scores_and_distributions.zip","bytes":303515,"extract":true}
+      ]
     },
     {
       "id": "sst", "active": false, "train_quota": 0,

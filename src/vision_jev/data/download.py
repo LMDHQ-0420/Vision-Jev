@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import os
@@ -17,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 WEBLINX_REVISION = "36ef9f79b43df50e25b7f3b68e5c9f6ccf4160e8"
+GUI_ODYSSEY_REVISION = "71e0e7e2d169c642e7a99c264d82ffecadf67889"
 _WEBLINX_ACTION = re.compile(r'^(click|submit)\(uid="([^"]+)"')
 
 
@@ -174,6 +176,7 @@ def download_source(
                 local_dir=target,
                 token=token,
                 allow_patterns=artifact.get("allow_patterns"),
+                max_workers=int(artifact.get("max_workers", 8)),
             )
             result_path = target
             digest = None
@@ -254,6 +257,119 @@ def inventory(data_root: Path) -> dict[str, Any]:
         ),
         "records": records,
         "free_bytes": shutil.disk_usage(data_root).free if data_root.exists() else None,
+    }
+
+
+def materialize_gui_odyssey_subset(
+    data_root: Path, *, target_rows: int = 8500, seed: str = "vision-jev-sft-v2.3"
+) -> dict[str, Any]:
+    """Select train steps first, then fetch only their source screenshots."""
+    from huggingface_hub import hf_hub_download, list_repo_tree
+
+    source_root = data_root / "raw" / "gui_odyssey"
+    annotations_path = source_root / "files" / "annotations" / "all_anno.json"
+    split_path = source_root / "files" / "random_split" / "splits" / "random_split.json"
+    if not annotations_path.is_file() or not split_path.is_file():
+        raise FileNotFoundError("download GUI-Odyssey annotations and random_split first")
+    annotations = json.loads(annotations_path.read_text(encoding="utf-8"))
+    split_payload = json.loads(split_path.read_text(encoding="utf-8"))
+    train_ids = {Path(value).stem for value in split_payload["train"]}
+    eligible: list[dict[str, Any]] = []
+    allowed_actions = {"CLICK", "SCROLL", "LONG_PRESS", "TEXT", "COMPLETE", "IMPOSSIBLE"}
+    for episode in annotations:
+        episode_id = str(episode["episode_id"])
+        if episode_id not in train_ids:
+            continue
+        steps = ast.literal_eval(str(episode["steps"]))
+        for step in steps:
+            if step.get("action") not in allowed_actions:
+                continue
+            key = f"{seed}\0{episode_id}\0{step['step']}"
+            eligible.append(
+                {
+                    "rank": hashlib.sha256(key.encode()).hexdigest(),
+                    "episode_id": episode_id,
+                    "device_name": episode.get("device_name"),
+                    "category": episode.get("category"),
+                    "task": episode.get("task"),
+                    "instruction": episode.get("instruction"),
+                    "step": int(step["step"]),
+                    "screenshot": str(step["screenshot"]),
+                    "action": str(step["action"]),
+                    "info": step.get("info"),
+                    "history": [
+                        {"action": previous.get("action"), "info": previous.get("info")}
+                        for previous in steps[: int(step["step"])]
+                    ],
+                }
+            )
+    selected = sorted(eligible, key=lambda item: item["rank"])[:target_rows]
+    if len(selected) < target_rows:
+        raise ValueError(f"GUI-Odyssey has only {len(selected)} eligible train steps")
+    target = source_root / "selected"
+    token = os.environ.get("HF_TOKEN")
+    metadata_root = source_root / "_metadata"
+    metadata_root.mkdir(parents=True, exist_ok=True)
+    screenshot_index_path = metadata_root / "screenshot-paths.json"
+    screenshot_paths: dict[str, str]
+    if screenshot_index_path.is_file():
+        screenshot_paths = json.loads(screenshot_index_path.read_text(encoding="utf-8"))
+    else:
+        screenshot_paths = {}
+        for entry in list_repo_tree(
+            repo_id="OpenGVLab/GUI-Odyssey",
+            repo_type="dataset",
+            path_in_repo="screenshots",
+            recursive=True,
+            revision=GUI_ODYSSEY_REVISION,
+            token=token,
+        ):
+            path = str(entry.path)
+            if path.endswith(".png"):
+                screenshot_paths[Path(path).name] = path
+        temporary_index = screenshot_index_path.with_suffix(".json.tmp")
+        temporary_index.write_text(
+            json.dumps(screenshot_paths, ensure_ascii=False, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        temporary_index.replace(screenshot_index_path)
+    missing_paths = sorted(
+        item["screenshot"] for item in selected if item["screenshot"] not in screenshot_paths
+    )
+    if missing_paths:
+        raise FileNotFoundError(f"GUI-Odyssey screenshot index misses {missing_paths[:3]}")
+
+    def fetch(item: dict[str, Any]) -> str:
+        filename = screenshot_paths[item["screenshot"]]
+        return hf_hub_download(
+            repo_id="OpenGVLab/GUI-Odyssey",
+            repo_type="dataset",
+            filename=filename,
+            revision=GUI_ODYSSEY_REVISION,
+            local_dir=target,
+            token=token,
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = {executor.submit(fetch, item): item for item in selected}
+        for completed, future in enumerate(as_completed(futures), 1):
+            future.result()
+            if completed % 250 == 0 or completed == len(selected):
+                print(f"GUI-Odyssey screenshots: {completed}/{len(selected)}", flush=True)
+    index_path = target / "index.jsonl"
+    temporary = index_path.with_suffix(".jsonl.tmp")
+    with temporary.open("w", encoding="utf-8") as handle:
+        for item in selected:
+            clean = {key: value for key, value in item.items() if key != "rank"}
+            clean["image"] = str(target / screenshot_paths[item["screenshot"]])
+            handle.write(json.dumps(clean, ensure_ascii=False, separators=(",", ":")) + "\n")
+    temporary.replace(index_path)
+    return {
+        "revision": GUI_ODYSSEY_REVISION,
+        "seed": seed,
+        "eligible_train_steps": len(eligible),
+        "selected_steps": len(selected),
+        "index": str(index_path),
     }
 
 

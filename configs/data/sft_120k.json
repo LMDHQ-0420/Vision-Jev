@@ -1,17 +1,18 @@
 {
   "schema_version": 2,
-  "mixture_id": "sft-120k-v2.2",
+  "mixture_id": "sft-120k-v2.3",
   "unit": "complete_question",
   "total_questions": 120000,
   "blocks": {
-    "public": {"questions": 90000, "choice": 76000, "noul": 14000, "score": 0},
-    "programmatic": {"questions": 24000, "choice": 16000, "noul": 2000, "score": 6000},
-    "verified_augmentation": {"questions": 6000, "choice": 4000, "noul": 2000, "score": 0}
+    "public": {"questions": 117000, "choice": 94000, "noul": 17000, "score": 6000},
+    "api_assisted": {"questions": 3000, "choice": 2000, "noul": 1000, "score": 0}
   },
   "public_source_quotas": {
     "multimodal_mind2web": 6000, "android_control": 16000, "weblinx": 6000,
     "gqa": 18000, "refcoco": 18000, "vqav2": 8000, "textvqa": 6000,
-    "chartqa": 6000, "clevr": 4000, "multi_nli": 2000
+    "chartqa": 6000, "clevr": 4000, "multi_nli": 2000,
+    "gui_odyssey": 8000, "visual7w": 6000, "scienceqa": 4000,
+    "nlvr": 3000, "koniq10k": 6000
   },
   "public_source_task_quotas": {
     "multimodal_mind2web": {"choice": 6000},
@@ -23,30 +24,29 @@
     "textvqa": {"choice": 4800, "noul": 1200},
     "chartqa": {"choice": 6000},
     "clevr": {"choice": 4000},
-    "multi_nli": {"choice": 2000}
-  },
-  "programmatic_quotas": {
-    "environment_action_demo": 8000, "candidate_set_comparison": 6000,
-    "visual_score": 6000, "known_uncertainty": 4000
+    "multi_nli": {"choice": 2000},
+    "gui_odyssey": {"choice": 8000},
+    "visual7w": {"choice": 6000},
+    "scienceqa": {"choice": 4000},
+    "nlvr": {"noul": 3000},
+    "koniq10k": {"score": 6000}
   },
   "augmentation_quotas": {
-    "same_language_semantic_rewrite": 3000,
-    "programmatic_hard_candidates": 2000,
-    "programmatic_counterfactual": 1000
+    "same_language_semantic_rewrite": 3000
   },
   "generation_budget": {
-    "local_automated": 27000,
+    "public_automated_ingestion": 117000,
+    "local_automated_generation": 0,
     "api_assisted_program_verified": 3000,
     "project_human_annotation": 0
   },
   "language_policy": {
     "public": "preserve_source_language",
-    "programmatic": "preserve_scenario_language",
-    "augmentation": "inherit_parent_language",
+    "api_assisted": "inherit_parent_language",
     "fixed_language_quota": false
   },
   "choice_k_distribution": {"2-4": 0.55, "5-8": 0.30, "9-16": 0.10, "17-32": 0.05},
   "teacher_only_questions": 0,
   "group_split": true,
-  "manifest": "data/manifests/sft-120k-v2.2.jsonl"
+  "manifest": "data/manifests/sft-120k-v2.3.jsonl"
 }

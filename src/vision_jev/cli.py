@@ -16,12 +16,8 @@ from vision_jev.data.download import (
     download_source,
     inventory,
     load_catalog,
+    materialize_gui_odyssey_subset,
     materialize_weblinx_subset,
-)
-from vision_jev.data.generate import (
-    generate_local_dataset,
-    generate_local_pilot,
-    generate_miniwob_pilot,
 )
 from vision_jev.data.pipeline import ADAPTERS, normalize_source
 from vision_jev.tracking import create_run, finalize_run
@@ -103,6 +99,14 @@ def data_download_weblinx_subset(args: argparse.Namespace) -> int:
     return 0
 
 
+def data_download_gui_odyssey_subset(args: argparse.Namespace) -> int:
+    report = materialize_gui_odyssey_subset(
+        args.data_root, target_rows=args.target_rows, seed=args.seed
+    )
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
 def data_normalize(args: argparse.Namespace) -> int:
     destination = args.output or args.data_root / "processed" / args.source / "canonical.jsonl"
     count = normalize_source(args.source, args.data_root, destination)
@@ -124,33 +128,6 @@ def data_build_public(args: argparse.Namespace) -> int:
     except ValueError as exc:
         print(f"manifest build blocked: {exc}", file=sys.stderr)
         return 2
-    print(json.dumps(report, ensure_ascii=False, indent=2))
-    return 0
-
-
-def data_generate_local(args: argparse.Namespace) -> int:
-    if args.miniwob_pilot:
-        report = generate_miniwob_pilot(
-            data_root=args.data_root,
-            destination=args.output,
-            seeds_per_environment=args.samples_per_family,
-        )
-    elif args.pilot:
-        report = generate_local_pilot(
-            data_root=args.data_root,
-            mixture_config=args.mixture,
-            destination=args.output,
-            samples_per_family=args.samples_per_family,
-            seed=args.seed,
-        )
-    else:
-        report = generate_local_dataset(
-            data_root=args.data_root,
-            mixture_config=args.mixture,
-            destination=args.output,
-            seed=args.seed,
-            progress=print,
-        )
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0
 
@@ -203,6 +180,14 @@ def build_parser() -> argparse.ArgumentParser:
     weblinx_parser.add_argument("--target-rows", type=int, default=7000)
     weblinx_parser.add_argument("--seed", default="vision-jev-sft-v2")
     weblinx_parser.set_defaults(func=data_download_weblinx_subset)
+    gui_parser = sub.add_parser(
+        "data-download-gui-odyssey-subset",
+        help="materialize a deterministic train-only GUI-Odyssey screenshot subset",
+    )
+    gui_parser.add_argument("--data-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev"))
+    gui_parser.add_argument("--target-rows", type=int, default=8500)
+    gui_parser.add_argument("--seed", default="vision-jev-sft-v2.3")
+    gui_parser.set_defaults(func=data_download_gui_odyssey_subset)
     normalize_parser = sub.add_parser("data-normalize", help="convert raw data to canonical JSONL")
     normalize_parser.add_argument("source", choices=sorted(ADAPTERS))
     normalize_parser.add_argument(
@@ -211,7 +196,7 @@ def build_parser() -> argparse.ArgumentParser:
     normalize_parser.add_argument("--output", type=Path)
     normalize_parser.set_defaults(func=data_normalize)
     build_parser = sub.add_parser(
-        "data-build-public", help="build the exact v2.2 public-data manifest or report shortages"
+        "data-build-public", help="build the configured public-data manifest or report shortages"
     )
     build_parser.add_argument(
         "--data-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev")
@@ -220,28 +205,10 @@ def build_parser() -> argparse.ArgumentParser:
     build_parser.add_argument(
         "--output",
         type=Path,
-        default=Path("/mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl"),
+        default=Path("/mnt/sda1/sol_data/vision-jev/manifests/public-117k-v2.3.jsonl"),
     )
     build_parser.add_argument("--seed", default="vision-jev-sft-v2")
     build_parser.set_defaults(func=data_build_public)
-    local_parser = sub.add_parser(
-        "data-generate-local", help="generate the deterministic API-free local visual block"
-    )
-    local_parser.add_argument(
-        "--data-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev")
-    )
-    local_parser.add_argument("--mixture", type=Path, default=Path("configs/data/sft_120k.json"))
-    local_parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path("/mnt/sda1/sol_data/vision-jev/processed/local_27k/canonical.jsonl"),
-    )
-    local_parser.add_argument("--seed", default="vision-jev-local-v2.2")
-    pilot_mode = local_parser.add_mutually_exclusive_group()
-    pilot_mode.add_argument("--pilot", action="store_true")
-    pilot_mode.add_argument("--miniwob-pilot", action="store_true")
-    local_parser.add_argument("--samples-per-family", type=int, default=8)
-    local_parser.set_defaults(func=data_generate_local)
     return parser
 
 

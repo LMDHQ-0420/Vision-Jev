@@ -6,9 +6,11 @@ into independent training rows.
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import re
+from bisect import bisect_right
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Iterator, Mapping
 from pathlib import Path
@@ -988,6 +990,380 @@ def normalize_mnli(data_root: Path, destination: Path) -> int:
     return _write_jsonl(samples(), destination)
 
 
+def normalize_nlvr(data_root: Path, destination: Path) -> int:
+    roots = sorted((data_root / "raw" / "nlvr" / "extracted" / "repository").glob("*/nlvr"))
+    if len(roots) != 1:
+        raise FileNotFoundError(f"expected one extracted NLVR root, found {len(roots)}")
+    root = roots[0]
+
+    def samples() -> Iterator[dict[str, Any]]:
+        for upstream_split, split in (("train", "train"), ("dev", "dev")):
+            annotations = root / upstream_split / f"{upstream_split}.json"
+            with annotations.open(encoding="utf-8") as handle:
+                for raw in handle:
+                    item = json.loads(raw)
+                    identifier = str(item["identifier"])
+                    group_id = f"nlvr:{upstream_split}:{identifier}"
+                    target = normalize_answer(item["label"]) == "true"
+                    for permutation in range(6):
+                        image = (
+                            root
+                            / upstream_split
+                            / "images"
+                            / str(item["directory"])
+                            / f"{upstream_split}-{identifier}-{permutation}.png"
+                        )
+                        if not image.is_file():
+                            raise FileNotFoundError(image)
+                        yield {
+                            "schema_version": 2,
+                            "sample_id": f"{group_id}:{permutation}",
+                            "root_id": group_id,
+                            "group_id": group_id,
+                            "source": "nlvr",
+                            "source_version": "git-18924841",
+                            "source_bucket": "public",
+                            "license": "CC-BY-4.0",
+                            "split": split,
+                            "task_type": "noul",
+                            "image": str(image),
+                            "image_metadata": {
+                                "transform": "none",
+                                "visual_budget": "source_native",
+                                "upstream_permutation": permutation,
+                            },
+                            "state_text": "",
+                            "question": str(item["sentence"]),
+                            "allowed_history": [],
+                            "input_track": "pure_visual",
+                            "options": [],
+                            "candidates": [],
+                            "target_kind": "binary",
+                            "target": target,
+                            "label_origin": "human",
+                            "origin_label_method": "human_consensus",
+                            "language": "en",
+                            "evidence_reference": f"identifier:{identifier}",
+                            "generator_version": "nlvr-v1",
+                            "generator_revision": "canonical-v2.3",
+                            "proposal_kind": "none",
+                            "quality": {"upstream_evals": item.get("evals", {})},
+                            "teacher_only": False,
+                        }
+
+    return _write_jsonl(samples(), destination)
+
+
+def normalize_visual7w(data_root: Path, destination: Path) -> int:
+    source_root = data_root / "raw" / "visual7w"
+    annotations = source_root / "extracted" / "pointing_annotations" / "dataset_v7w_pointing.json"
+    payload = json.loads(annotations.read_text(encoding="utf-8"))
+    boxes = {int(item["box_id"]): item for item in payload["boxes"]}
+    image_candidates = sorted((source_root / "extracted" / "images").glob("**/v7w_*.jpg"))
+    if not image_candidates:
+        raise FileNotFoundError("Visual7W image package is not extracted")
+    image_root = image_candidates[0].parent
+
+    def samples() -> Iterator[dict[str, Any]]:
+        split_map = {"train": "train", "val": "dev", "test": "test"}
+        for image_item in payload["images"]:
+            upstream_split = str(image_item["split"])
+            if upstream_split not in split_map:
+                continue
+            image_id = int(image_item["image_id"])
+            image = image_root / str(image_item["filename"])
+            if not image.is_file():
+                raise FileNotFoundError(image)
+            for qa in image_item["qa_pairs"]:
+                answer_id = int(qa["answer"])
+                candidate_ids = [answer_id, *(int(value) for value in qa["multiple_choices"])]
+                if len(candidate_ids) != 4 or len(set(candidate_ids)) != 4:
+                    continue
+                qa_id = int(qa["qa_id"])
+                candidate_ids.sort(
+                    key=lambda value: hashlib.sha256(f"visual7w:{qa_id}:{value}".encode()).digest()
+                )
+                options: list[dict[str, Any]] = []
+                for candidate_id in candidate_ids:
+                    box = boxes[candidate_id]
+                    x, y = int(box["x"]), int(box["y"])
+                    width, height = int(box["width"]), int(box["height"])
+                    if width <= 0 or height <= 0:
+                        options = []
+                        break
+                    options.append(
+                        {
+                            "id": f"box_{candidate_id}",
+                            "text": str(box.get("name") or f"region {candidate_id}"),
+                            "box": [x, y, x + width, y + height],
+                        }
+                    )
+                if len(options) != 4:
+                    continue
+                yield {
+                    "schema_version": 2,
+                    "sample_id": f"visual7w:{qa_id}",
+                    "root_id": f"visual7w-image:{image_id}",
+                    "group_id": f"visual7w-image:{image_id}",
+                    "source": "visual7w",
+                    "source_version": "pointing-v1.0",
+                    "source_bucket": "public",
+                    "license": "Visual7W/underlying-image-terms",
+                    "split": split_map[upstream_split],
+                    "task_type": "choice",
+                    "image": str(image),
+                    "image_metadata": {"transform": "none", "visual_budget": "source_native"},
+                    "state_text": "",
+                    "question": str(qa["question"]),
+                    "allowed_history": [],
+                    "input_track": "pure_visual",
+                    "options": options,
+                    "candidates": options,
+                    "target_kind": "single",
+                    "target": f"box_{answer_id}",
+                    "label_origin": "human",
+                    "origin_label_method": "human_multiple_choice_grounding",
+                    "language": "en",
+                    "evidence_reference": f"qa_id:{qa_id}",
+                    "generator_version": "visual7w-pointing-v1",
+                    "generator_revision": "canonical-v2.3",
+                    "proposal_kind": "oracle",
+                    "quality": {"upstream_question_type": qa.get("type")},
+                    "teacher_only": False,
+                }
+
+    return _write_jsonl(samples(), destination)
+
+
+def normalize_scienceqa(data_root: Path, destination: Path) -> int:
+    source_root = data_root / "raw" / "scienceqa"
+    repositories = sorted((source_root / "extracted" / "repository").glob("ScienceQA-*"))
+    if len(repositories) != 1:
+        raise FileNotFoundError(f"expected one extracted ScienceQA root, found {len(repositories)}")
+    problems = json.loads(
+        (repositories[0] / "data" / "scienceqa" / "problems.json").read_text(encoding="utf-8")
+    )
+    split_map = {"train": "train", "val": "dev", "test": "test"}
+
+    def samples() -> Iterator[dict[str, Any]]:
+        for problem_id, item in problems.items():
+            upstream_split = str(item["split"])
+            if item.get("image") is None or upstream_split not in split_map:
+                continue
+            choices = [str(value) for value in item["choices"]]
+            answer_index = int(item["answer"])
+            if answer_index < 0 or answer_index >= len(choices) or len(choices) < 2:
+                continue
+            indexed_choices = list(enumerate(choices))
+            indexed_choices.sort(
+                key=lambda pair: hashlib.sha256(
+                    f"scienceqa:{problem_id}:{pair[0]}".encode()
+                ).digest()
+            )
+            options = [{"id": f"choice_{index}", "text": text} for index, text in indexed_choices]
+            image = (
+                source_root
+                / "extracted"
+                / f"{upstream_split}_images"
+                / upstream_split
+                / str(problem_id)
+                / str(item["image"])
+            )
+            if not image.is_file():
+                raise FileNotFoundError(image)
+            yield {
+                "schema_version": 2,
+                "sample_id": f"scienceqa:{problem_id}",
+                "root_id": f"scienceqa:{problem_id}",
+                "group_id": f"scienceqa:{problem_id}",
+                "source": "scienceqa",
+                "source_version": "git-2cbf8318",
+                "source_bucket": "public",
+                "license": "CC-BY-NC-SA-4.0",
+                "split": split_map[upstream_split],
+                "task_type": "choice",
+                "image": str(image),
+                "image_metadata": {"transform": "none", "visual_budget": "source_native"},
+                "state_text": str(item.get("hint") or ""),
+                "question": str(item["question"]),
+                "allowed_history": [],
+                "input_track": "pure_visual",
+                "options": options,
+                "candidates": options,
+                "target_kind": "single",
+                "target": f"choice_{answer_index}",
+                "label_origin": "human",
+                "origin_label_method": "upstream_multiple_choice_label",
+                "language": "en",
+                "evidence_reference": f"problem_id:{problem_id}",
+                "generator_version": "scienceqa-v1",
+                "generator_revision": "canonical-v2.3",
+                "proposal_kind": "none",
+                "quality": {
+                    "grade": item.get("grade"),
+                    "subject": item.get("subject"),
+                    "category": item.get("category"),
+                },
+                "teacher_only": False,
+            }
+
+    return _write_jsonl(samples(), destination)
+
+
+def _gui_odyssey_action_text(action: str, info: Any) -> str:
+    if action in {"COMPLETE", "IMPOSSIBLE"}:
+        return action
+    if action == "TEXT":
+        return f"TYPE {info}"
+    if action == "CLICK" and isinstance(info, str):
+        return f"CLICK {info}"
+    if action in {"CLICK", "LONG_PRESS"} and isinstance(info, list) and info:
+        point = info[0]
+        return f"{action} ({int(point[0])},{int(point[1])})"
+    if action == "SCROLL" and isinstance(info, list) and len(info) >= 2:
+        start, end = info[0], info[1]
+        return f"SCROLL ({int(start[0])},{int(start[1])})->({int(end[0])},{int(end[1])})"
+    return f"{action} {info}"
+
+
+def normalize_gui_odyssey(data_root: Path, destination: Path) -> int:
+    index = data_root / "raw" / "gui_odyssey" / "selected" / "index.jsonl"
+    rows = [json.loads(raw) for raw in index.read_text(encoding="utf-8").splitlines() if raw]
+    action_pool = compact_answer_pool(
+        _gui_odyssey_action_text(str(row["action"]), row.get("info")) for row in rows
+    )
+
+    def samples() -> Iterator[dict[str, Any]]:
+        for row in rows:
+            sample_id = f"gui-odyssey:{row['episode_id']}:{row['step']}"
+            answer = normalize_answer(_gui_odyssey_action_text(str(row["action"]), row.get("info")))
+            negatives = stable_negatives(answer, action_pool, sample_id)
+            values = [answer, *negatives]
+            values.sort(key=lambda value: hashlib.sha256(f"{sample_id}:{value}".encode()).digest())
+            options = [
+                {"id": f"action_{index}", "text": value} for index, value in enumerate(values)
+            ]
+            target = next(option["id"] for option in options if option["text"] == answer)
+            history = [
+                _gui_odyssey_action_text(str(item["action"]), item.get("info"))
+                for item in row.get("history", [])
+            ]
+            yield {
+                "schema_version": 2,
+                "sample_id": sample_id,
+                "root_id": f"gui-odyssey:{row['episode_id']}",
+                "group_id": f"gui-odyssey:{row['episode_id']}",
+                "source": "gui_odyssey",
+                "source_version": "hf-71e0e7e2",
+                "source_bucket": "public",
+                "license": "CC-BY-4.0",
+                "split": "train",
+                "task_type": "choice",
+                "image": str(row["image"]),
+                "image_metadata": {"transform": "none", "visual_budget": "source_native"},
+                "state_text": str(row.get("instruction") or row.get("task") or ""),
+                "question": "Which recorded action should be taken next to complete this task?",
+                "allowed_history": history,
+                "input_track": "high_level_goal_pure_visual",
+                "options": options,
+                "candidates": options,
+                "target_kind": "single",
+                "target": target,
+                "label_origin": "human",
+                "origin_label_method": "upstream_demonstration_action",
+                "language": "en",
+                "evidence_reference": f"episode:{row['episode_id']}:step:{row['step']}",
+                "generator_version": "gui-odyssey-v1",
+                "generator_revision": "canonical-v2.3",
+                "proposal_kind": "none",
+                "quality": {
+                    "category": row.get("category"),
+                    "device_name": row.get("device_name"),
+                },
+                "teacher_only": False,
+            }
+
+    return _write_jsonl(samples(), destination)
+
+
+def normalize_koniq10k(data_root: Path, destination: Path) -> int:
+    root = data_root / "raw" / "koniq10k" / "extracted"
+    scores_path = root / "scores" / "koniq10k_scores_and_distributions.csv"
+    image_root = root / "images_1024x768" / "1024x768"
+    options = [
+        {"id": f"score_{rating}", "text": f"relative quality level {rating}"}
+        for rating in range(1, 6)
+    ]
+    with scores_path.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+
+    def assigned_split(image_name: str) -> str:
+        bucket = hashlib.sha256(f"koniq10k:{image_name}".encode()).digest()[0] % 10
+        return "train" if bucket < 8 else "dev" if bucket == 8 else "test"
+
+    train_mos = sorted(
+        float(row["MOS"]) for row in rows if assigned_split(row["image_name"]) == "train"
+    )
+    thresholds = [train_mos[len(train_mos) * quantile // 5] for quantile in range(1, 5)]
+
+    def samples() -> Iterator[dict[str, Any]]:
+        for row in rows:
+            image_name = str(row["image_name"])
+            image = image_root / image_name
+            if not image.is_file():
+                raise FileNotFoundError(image)
+            counts = {rating: int(row[f"c{rating}"]) for rating in range(1, 6)}
+            mos = float(row["MOS"])
+            upstream_mode = min(
+                counts,
+                key=lambda rating: (-counts[rating], abs(rating - mos), rating),
+            )
+            target_rating = bisect_right(thresholds, mos) + 1
+            split = assigned_split(image_name)
+            yield {
+                "schema_version": 2,
+                "sample_id": f"koniq10k:{Path(image_name).stem}",
+                "root_id": f"koniq10k:{Path(image_name).stem}",
+                "group_id": f"koniq10k:{Path(image_name).stem}",
+                "source": "koniq10k",
+                "source_version": "koniq-10k-1024x768",
+                "source_bucket": "public",
+                "license": "KonIQ-10k/research-use",
+                "split": split,
+                "task_type": "score",
+                "image": str(image),
+                "image_metadata": {"transform": "none", "visual_budget": "1024x768"},
+                "state_text": "",
+                "question": "Rate the dataset-relative perceptual quality of this image.",
+                "allowed_history": [],
+                "input_track": "pure_visual",
+                "options": options,
+                "candidates": options,
+                "target_kind": "ordinal_train_mos_quintile_5",
+                "target": f"score_{target_rating}",
+                "label_origin": "human",
+                "origin_label_method": "derived_train_mos_quintile_from_upstream_ratings",
+                "language": "en",
+                "evidence_reference": f"image_name:{image_name}",
+                "generator_version": "koniq10k-v1",
+                "generator_revision": "canonical-v2.3",
+                "proposal_kind": "none",
+                "quality": {
+                    "rating_counts": [counts[rating] for rating in range(1, 6)],
+                    "rating_total": int(row["c_total"]),
+                    "mos": mos,
+                    "sd": float(row["SD"]),
+                    "mos_zscore": float(row["MOS_zscore"]),
+                    "upstream_mode": upstream_mode,
+                    "train_mos_quintile_thresholds": thresholds,
+                    "semantics": "dataset_relative_ordinal_human_image_quality_rating",
+                },
+                "teacher_only": False,
+            }
+
+    return _write_jsonl(samples(), destination)
+
+
 ADAPTERS = {
     "multimodal_mind2web": normalize_mind2web,
     "refcoco": normalize_refcoco,
@@ -999,6 +1375,11 @@ ADAPTERS = {
     "textvqa": normalize_textvqa,
     "clevr": normalize_clevr,
     "multi_nli": normalize_mnli,
+    "nlvr": normalize_nlvr,
+    "visual7w": normalize_visual7w,
+    "scienceqa": normalize_scienceqa,
+    "gui_odyssey": normalize_gui_odyssey,
+    "koniq10k": normalize_koniq10k,
 }
 
 
