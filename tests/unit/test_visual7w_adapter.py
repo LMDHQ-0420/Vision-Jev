@@ -57,6 +57,9 @@ class Visual7wAdapterTest(unittest.TestCase):
             sample = json.loads(destination.read_text(encoding="utf-8"))
             self.assertEqual(sample["target"], "box_1")
             self.assertTrue(all("box" in option for option in sample["options"]))
+            self.assertEqual(
+                {option["text"] for option in sample["options"]}, {"candidate region"}
+            )
 
 
 if __name__ == "__main__":

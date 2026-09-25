@@ -82,6 +82,13 @@ def question_text(sample: dict[str, Any]) -> str:
     state = str(sample.get("state_text", "")).strip()
     if state:
         sections.append(f"Visible state: {state}")
+    history = sample.get("allowed_history", [])
+    if history:
+        rendered_history = "\n".join(
+            f"{index}. {json.dumps(item, ensure_ascii=False)}"
+            for index, item in enumerate(history, 1)
+        )
+        sections.append(f"Completed steps (oldest to newest):\n{rendered_history}")
     sections.append(f"Question: {sample['question']}")
     options = sample.get("options", [])
     if options:

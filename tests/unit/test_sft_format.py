@@ -25,6 +25,21 @@ def test_sft_choice_format_uses_candidate_id() -> None:
     assert "option_1: right" in prompt
 
 
+def test_prompt_includes_completed_history() -> None:
+    sample = {
+        "task_type": "choice",
+        "state_text": "Open settings",
+        "question": "What next?",
+        "allowed_history": [{"action_type": "click"}, "scroll down"],
+        "options": [{"id": "a", "text": "Settings"}],
+        "target": "a",
+    }
+    prompt = question_text(sample)
+    assert "Completed steps (oldest to newest):" in prompt
+    assert '1. {"action_type": "click"}' in prompt
+    assert '2. "scroll down"' in prompt
+
+
 def test_sft_noul_format_uses_json_boolean() -> None:
     sample = {
         "task_type": "noul",

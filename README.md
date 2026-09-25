@@ -77,7 +77,7 @@ vision-jev data-build-public \
   --mixture configs/data/sft_120k.json \
   --output /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl
 vision-jev data-rewrite-api \
-  --input /mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl \
+  --input /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl \
   --output /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
   --choice 2200 --noul 1100 --provider kimi \
   --minimum-choice 2000 --minimum-noul 1000 \
@@ -86,7 +86,7 @@ vision-jev data-rewrite-api \
   --max-runtime-hours 4.75
 vision-jev data-audit-rewrites \
   --candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
-  --parents /mnt/sda1/sol_data/vision-jev/manifests/public-90k-v2.2.jsonl
+  --parents /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl
 vision-jev data-build-final \
   --public /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl \
   --api-candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl

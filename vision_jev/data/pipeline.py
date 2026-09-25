@@ -18,6 +18,10 @@ from typing import Any
 
 YES = {"yes", "true"}
 NO = {"no", "false"}
+COLORS = {
+    "black", "blue", "brown", "cyan", "gold", "gray", "green", "grey", "orange",
+    "pink", "purple", "red", "silver", "tan", "teal", "white", "yellow",
+}
 
 
 def normalize_answer(value: Any) -> str:
@@ -46,6 +50,100 @@ def compact_answer_pool(values: Iterable[str], limit: int = 512) -> list[str]:
     )[:limit]
 
 
+def _answer_kind(value: str) -> str:
+    """Coarse answer type used to prevent trivially incompatible distractors."""
+    answer = normalize_answer(value)
+    if answer in COLORS:
+        return "color"
+    if re.fullmatch(
+        r"[$€£]?[-+]?\d[\d,.]*(?::\d+|%|\s*(?:percent|percentage))?", answer
+    ):
+        return "number"
+    if re.fullmatch(r"\d{1,2}:\d{2}\s*[ap]m", answer):
+        return "time"
+    return "phrase" if " " in answer else "word"
+
+
+def _question_family(question: str) -> str:
+    """Map common visual questions to stable semantic families."""
+    text = normalize_answer(question)
+    patterns = (
+        ("count", r"\bhow many\b|\bnumber of\b"),
+        ("quantity", r"\bhow much\b|\bwhat (?:percentage|percent|value|amount)\b"),
+        ("color", r"\b(?:what|which) colou?r\b"),
+        ("shape", r"\b(?:what|which) shape\b"),
+        ("material", r"\bmade of\b|\bmaterial\b"),
+        ("size", r"\b(?:what|which) size\b|\bhow (?:large|small|big|tall|long)\b"),
+        ("location", r"^where\b|\bwhich (?:room|place|location|country|city)\b"),
+        ("person", r"^who\b|\bwhich person\b"),
+        ("time", r"^when\b|\bwhat time\b|\bwhich year\b"),
+        ("text", r"\b(?:say|says|read|written|word|text|title)\b"),
+        ("brand", r"\bbrand\b|\blogo\b"),
+        ("sport", r"\b(?:sport|game)\b"),
+        ("animal", r"\b(?:animal|bird|dog|cat)\b"),
+        ("type", r"\b(?:type|kind|sort) of\b"),
+        ("reason", r"^why\b"),
+    )
+    for family, pattern in patterns:
+        if re.search(pattern, text):
+            return family
+    first = re.match(r"(?:what|which|how|is|are|does|do|can)\b", text)
+    return first.group(0) if first else "other"
+
+
+def compatible_answer_pools(
+    rows: Iterable[Mapping[str, Any]],
+    *,
+    split_key: str,
+    question_key: str,
+    answer_key: str,
+) -> tuple[dict[tuple[str, str, str], list[str]], dict[tuple[str, str], list[str]]]:
+    """Build semantic and type fallback pools for hard-negative selection."""
+    exact: dict[tuple[str, str, str], list[str]] = defaultdict(list)
+    fallback: dict[tuple[str, str], list[str]] = defaultdict(list)
+    for row in rows:
+        split = str(row[split_key])
+        answer = normalize_answer(row[answer_key])
+        kind = _answer_kind(answer)
+        exact[(split, _question_family(str(row[question_key])), kind)].append(answer)
+        fallback[(split, kind)].append(answer)
+    return (
+        {key: compact_answer_pool(values) for key, values in exact.items()},
+        {key: compact_answer_pool(values) for key, values in fallback.items()},
+    )
+
+
+def compatible_answer_pool(
+    exact: Mapping[tuple[str, str, str], list[str]],
+    fallback: Mapping[tuple[str, str], list[str]],
+    *,
+    split: str,
+    question: str,
+    answer: str,
+) -> list[str]:
+    kind = _answer_kind(answer)
+    pool = exact.get((split, _question_family(question), kind), [])
+    return pool if len(set(pool) - {normalize_answer(answer)}) >= 3 else fallback[(split, kind)]
+
+
+def _most_specific_target(candidates: list[dict[str, Any]], target_ids: list[str]) -> str:
+    """Resolve nested valid hit boxes to the smallest visible target."""
+    targets = set(target_ids)
+    matched = [item for item in candidates if str(item["id"]) in targets]
+    if not matched:
+        raise ValueError("no target candidate is present")
+    return str(
+        min(
+            matched,
+            key=lambda item: (
+                (float(item["box"][2]) - float(item["box"][0]))
+                * (float(item["box"][3]) - float(item["box"][1])),
+                str(item["id"]),
+            ),
+        )["id"]
+    )
+
+
 def open_qa_sample(
     *,
     source: str,
@@ -63,7 +161,7 @@ def open_qa_sample(
     label_origin: str = "human",
     origin_label_method: str = "human",
     quality: Mapping[str, Any] | None = None,
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     normalized = normalize_answer(answer)
     common = {
         "schema_version": 2,
@@ -102,6 +200,8 @@ def open_qa_sample(
         }
     negatives = stable_negatives(normalized, answer_pool, sample_id)
     option_values = [normalized, *negatives]
+    if len(option_values) < 2:
+        return None
     option_values.sort(key=lambda item: hashlib.sha256(f"{sample_id}:{item}".encode()).digest())
     options = [
         {"id": f"option_{index}", "text": value} for index, value in enumerate(option_values)
@@ -117,12 +217,14 @@ def open_qa_sample(
     }
 
 
-def _write_jsonl(samples: Iterable[Mapping[str, Any]], destination: Path) -> int:
+def _write_jsonl(samples: Iterable[Mapping[str, Any] | None], destination: Path) -> int:
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_suffix(destination.suffix + ".tmp")
     count = 0
     with temporary.open("w", encoding="utf-8") as handle:
         for sample in samples:
+            if sample is None:
+                continue
             handle.write(json.dumps(sample, ensure_ascii=False, separators=(",", ":")) + "\n")
             count += 1
     from vision_jev.data.schema import validate_jsonl
@@ -250,6 +352,7 @@ def normalize_mind2web(data_root: Path, destination: Path) -> int:
                         for candidate in positive
                         if candidate["id"] in candidates_by_id
                     ]
+                    target_id = _most_specific_target(candidates, target_ids)
                     screenshot = item["screenshot"] or {}
                     image_bytes = screenshot.get("bytes")
                     if not image_bytes:
@@ -277,8 +380,8 @@ def normalize_mind2web(data_root: Path, destination: Path) -> int:
                         "input_track": "high_level_goal_visual_dom_candidates",
                         "options": candidates,
                         "candidates": candidates,
-                        "target_kind": "single" if len(target_ids) == 1 else "multiple",
-                        "target": target_ids[0] if len(target_ids) == 1 else target_ids,
+                        "target_kind": "single",
+                        "target": target_id,
                         "label_origin": "human",
                         "origin_label_method": "human_action_demonstration",
                         "language": "en",
@@ -416,7 +519,12 @@ def normalize_chartqa(data_root: Path, destination: Path) -> int:
                 digest = hashlib.sha256(item["image"]).hexdigest()
                 if digest not in split_by_digest or split == "dev":
                     split_by_digest[digest] = split
-    compact_pools = {split: compact_answer_pool(values) for split, values in pools.items()}
+    kind_pools: dict[tuple[str, str], list[str]] = {}
+    for split, values in pools.items():
+        for kind in {_answer_kind(value) for value in values}:
+            kind_pools[(split, kind)] = compact_answer_pool(
+                value for value in values if _answer_kind(value) == kind
+            )
     image_root = data_root / "processed" / "chartqa" / "images"
     image_root.mkdir(parents=True, exist_ok=True)
 
@@ -447,7 +555,9 @@ def normalize_chartqa(data_root: Path, destination: Path) -> int:
                         image=str(image_path),
                         question=item["query"],
                         answer=item["label"],
-                        answer_pool=compact_pools[canonical_split],
+                        answer_pool=kind_pools[
+                            (canonical_split, _answer_kind(str(item["label"])))
+                        ],
                         license_name="ChartQA/GPL-3.0-review-required",
                         evidence_reference=f"image:{item['imgname']}:row:{current_index}",
                         origin_label_method=(
@@ -594,6 +704,11 @@ def normalize_android_control(data_root: Path, destination: Path) -> int:
                     target_ids = [target for target in target_ids if target in candidate_ids]
                     if not target_ids:
                         continue
+                    target_id = (
+                        _most_specific_target(candidates, target_ids)
+                        if action_type in {"click", "long_press"}
+                        else target_ids[0]
+                    )
                     image_path = image_root / f"{episode_id}-{step:04d}.png"
                     if not image_path.exists():
                         image_path.write_bytes(bytes(screenshots[step]))
@@ -617,8 +732,8 @@ def normalize_android_control(data_root: Path, destination: Path) -> int:
                         "input_track": "high_level_goal_pure_visual",
                         "options": candidates,
                         "candidates": candidates,
-                        "target_kind": "single" if len(target_ids) == 1 else "multiple",
-                        "target": target_ids[0] if len(target_ids) == 1 else target_ids,
+                        "target_kind": "single",
+                        "target": target_id,
                         "label_origin": "human",
                         "origin_label_method": "human_action_demonstration",
                         "language": "en",
@@ -770,10 +885,9 @@ def normalize_vqav2(data_root: Path, destination: Path) -> int:
                     "upstream": str(annotation["question_id"]),
                 }
             )
-    pools: dict[str, list[str]] = defaultdict(list)
-    for row in rows:
-        pools[row["split"]].append(row["answer"])
-    compact_pools = {split: compact_answer_pool(values) for split, values in pools.items()}
+    exact_pools, fallback_pools = compatible_answer_pools(
+        rows, split_key="split", question_key="question", answer_key="answer"
+    )
 
     def samples() -> Iterator[dict[str, Any]]:
         for row in rows:
@@ -796,7 +910,13 @@ def normalize_vqav2(data_root: Path, destination: Path) -> int:
                 ),
                 question=row["question"],
                 answer=row["answer"],
-                answer_pool=compact_pools[row["split"]],
+                answer_pool=compatible_answer_pool(
+                    exact_pools,
+                    fallback_pools,
+                    split=row["split"],
+                    question=row["question"],
+                    answer=row["answer"],
+                ),
                 license_name="VQAv2/COCO-upstream-terms",
                 evidence_reference=f"question_id:{row['upstream']}",
                 quality={"answer_agreement": row["agreement"], "minimum_required": 8},
@@ -815,8 +935,18 @@ def normalize_textvqa(data_root: Path, destination: Path) -> int:
             agreement = Counter(normalized_answers).most_common(1)[0][1]
             if agreement >= 8:
                 rows.append({**item, "canonical_split": split, "agreement": agreement})
-    answer_pool = compact_answer_pool(
-        normalize_answer(Counter(item["answers"]).most_common(1)[0][0]) for item in rows
+    pool_rows = [
+        {
+            "split": item["canonical_split"],
+            "question": item["question"],
+            "answer": Counter(
+                normalize_answer(value) for value in item["answers"]
+            ).most_common(1)[0][0],
+        }
+        for item in rows
+    ]
+    exact_pools, fallback_pools = compatible_answer_pools(
+        pool_rows, split_key="split", question_key="question", answer_key="answer"
     )
 
     def samples() -> Iterator[dict[str, Any]]:
@@ -842,7 +972,13 @@ def normalize_textvqa(data_root: Path, destination: Path) -> int:
                 image=str(image),
                 question=item["question"],
                 answer=answer,
-                answer_pool=answer_pool,
+                answer_pool=compatible_answer_pool(
+                    exact_pools,
+                    fallback_pools,
+                    split=item["canonical_split"],
+                    question=item["question"],
+                    answer=answer,
+                ),
                 license_name="CC-BY-4.0",
                 evidence_reference=f"question_id:{item['question_id']}",
                 quality={
@@ -862,7 +998,12 @@ def normalize_clevr(data_root: Path, destination: Path) -> int:
         path = root / "questions" / f"CLEVR_{upstream_split}_questions.json"
         for item in json.loads(path.read_text(encoding="utf-8"))["questions"]:
             rows.append({**item, "upstream_split": upstream_split, "canonical_split": split})
-    pools = compact_answer_pool(item["answer"] for item in rows)
+    for item in rows:
+        item["answer_family"] = str(item.get("program", [{}])[-1].get("function", "other"))
+    clevr_pools: dict[tuple[str, str], list[str]] = defaultdict(list)
+    for item in rows:
+        clevr_pools[(item["canonical_split"], item["answer_family"])].append(item["answer"])
+    clevr_pools = {key: compact_answer_pool(values) for key, values in clevr_pools.items()}
 
     def samples() -> Iterator[dict[str, Any]]:
         for item in rows:
@@ -875,7 +1016,7 @@ def normalize_clevr(data_root: Path, destination: Path) -> int:
                 image=str(root / "images" / item["upstream_split"] / item["image_filename"]),
                 question=item["question"],
                 answer=item["answer"],
-                answer_pool=pools,
+                answer_pool=clevr_pools[(item["canonical_split"], item["answer_family"])],
                 license_name="CC-BY-4.0",
                 evidence_reference=f"program:{item['question_index']}",
                 label_origin="programmatic",
@@ -893,10 +1034,9 @@ def normalize_gqa(data_root: Path, destination: Path) -> int:
         payload = json.loads(path.read_text(encoding="utf-8"))
         for question_id, item in payload.items():
             rows.append({"id": question_id, "split": split, **item})
-    pools: dict[str, list[str]] = defaultdict(list)
-    for row in rows:
-        pools[row["split"]].append(row["answer"])
-    compact_pools = {split: compact_answer_pool(values) for split, values in pools.items()}
+    exact_pools, fallback_pools = compatible_answer_pools(
+        rows, split_key="split", question_key="question", answer_key="answer"
+    )
 
     def samples() -> Iterator[dict[str, Any]]:
         for row in rows:
@@ -917,7 +1057,13 @@ def normalize_gqa(data_root: Path, destination: Path) -> int:
                 ),
                 question=row["question"],
                 answer=row["answer"],
-                answer_pool=compact_pools[row["split"]],
+                answer_pool=compatible_answer_pool(
+                    exact_pools,
+                    fallback_pools,
+                    split=row["split"],
+                    question=row["question"],
+                    answer=row["answer"],
+                ),
                 license_name="GQA/upstream-image-terms",
                 evidence_reference="semantic:"
                 + json.dumps(row.get("semantic", []), separators=(",", ":")),
@@ -1094,7 +1240,7 @@ def normalize_visual7w(data_root: Path, destination: Path) -> int:
                     options.append(
                         {
                             "id": f"box_{candidate_id}",
-                            "text": str(box.get("name") or f"region {candidate_id}"),
+                            "text": "candidate region",
                             "box": [x, y, x + width, y + height],
                         }
                     )
