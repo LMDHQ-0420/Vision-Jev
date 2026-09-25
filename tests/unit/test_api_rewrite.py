@@ -8,6 +8,7 @@ from pathlib import Path
 from vision_jev.data.api_rewrite import (
     _backoff_delay,
     _extract_grouped_questions,
+    _generate_grouped_rewrites,
     audit_rewrites,
     make_rewrite,
     select_parents,
@@ -114,6 +115,34 @@ class APIRewriteTest(unittest.TestCase):
             selected = select_parents(manifest, choice=2, noul=1)
             self.assertEqual([row["task_type"] for row in selected].count("choice"), 2)
             self.assertEqual([row["task_type"] for row in selected].count("noul"), 1)
+
+    def test_resume_prunes_candidates_from_old_parent_set(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            destination = Path(directory) / "candidates.jsonl"
+            current = _sample("source:current", "choice")
+            stale = _sample("source:stale", "choice")
+            rows = [
+                make_rewrite(current, "Are precisely 2 items not red?", "kimi", "model"),
+                make_rewrite(stale, "Are precisely 2 items not red?", "kimi", "model"),
+            ]
+            destination.write_text("".join(json.dumps(row) + "\n" for row in rows))
+            result = _generate_grouped_rewrites(
+                [current],
+                client=object(),
+                model="model",
+                destination=destination,
+                provider="kimi",
+                max_attempts=1,
+                group_size=2,
+                min_interval_seconds=0,
+                max_workers=1,
+                backoff_base_seconds=1,
+                backoff_cap_seconds=1,
+                max_runtime_seconds=1,
+            )
+            self.assertEqual(result.accepted, 1)
+            saved = [json.loads(line) for line in destination.read_text().splitlines()]
+            self.assertEqual(saved[0]["quality"]["parent_sample_id"], "source:current")
 
 
 if __name__ == "__main__":

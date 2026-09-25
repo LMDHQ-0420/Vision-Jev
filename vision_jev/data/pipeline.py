@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import io
 import json
 import re
 from bisect import bisect_right
@@ -74,7 +75,11 @@ def _question_family(question: str) -> str:
         ("shape", r"\b(?:what|which) shape\b"),
         ("material", r"\bmade of\b|\bmaterial\b"),
         ("size", r"\b(?:what|which) size\b|\bhow (?:large|small|big|tall|long)\b"),
-        ("location", r"^where\b|\bwhich (?:room|place|location|country|city)\b"),
+        (
+            "location",
+            r"^where\b|\b(?:what|which) (?:room|place|location|country|city|state|region)\b",
+        ),
+        ("organization", r"\b(?:what|which) (?:company|organization|team)\b"),
         ("person", r"^who\b|\bwhich person\b"),
         ("time", r"^when\b|\bwhat time\b|\bwhich year\b"),
         ("text", r"\b(?:say|says|read|written|word|text|title)\b"),
@@ -142,6 +147,24 @@ def _most_specific_target(candidates: list[dict[str, Any]], target_ids: list[str
             ),
         )["id"]
     )
+
+
+def _usable_gui_target(
+    candidates: list[dict[str, Any]], target_id: str, image_size: tuple[int, int]
+) -> bool:
+    """Reject targets that cannot be learned from the provided screenshot."""
+    candidate = next((item for item in candidates if str(item["id"]) == target_id), None)
+    if candidate is None or "box" not in candidate:
+        return True
+    x1, y1, x2, y2 = (float(value) for value in candidate["box"])
+    width, height = image_size
+    area = (x2 - x1) * (y2 - y1)
+    if area <= 0 or width <= 0 or height <= 0 or area > width * height * 0.9:
+        return False
+    overlap = max(0.0, min(x2, width) - max(x1, 0.0)) * max(
+        0.0, min(y2, height) - max(y1, 0.0)
+    )
+    return overlap / area >= 0.5
 
 
 def open_qa_sample(
@@ -357,6 +380,11 @@ def normalize_mind2web(data_root: Path, destination: Path) -> int:
                     image_bytes = screenshot.get("bytes")
                     if not image_bytes:
                         continue
+                    from PIL import Image
+
+                    with Image.open(io.BytesIO(image_bytes)) as screenshot_image:
+                        if not _usable_gui_target(candidates, target_id, screenshot_image.size):
+                            continue
                     image_path = image_root / f"{action_uid}.jpg"
                     if not image_path.exists():
                         image_path.write_bytes(image_bytes)
@@ -507,24 +535,27 @@ def normalize_chartqa(data_root: Path, destination: Path) -> int:
 
     root = data_root / "raw" / "chartqa" / "snapshots" / "dataset"
     files = sorted((root / "data").glob("*.parquet"))
-    pools: dict[str, list[str]] = defaultdict(list)
+    pool_rows: list[dict[str, str]] = []
     split_by_digest: dict[str, str] = {}
     for path in files:
         split = "train" if "train" in path.name else "dev"
         if "test" in path.name:
             continue
-        for batch in pq.ParquetFile(path).iter_batches(columns=["label", "image"]):
+        for batch in pq.ParquetFile(path).iter_batches(columns=["label", "image", "query"]):
             for item in batch.to_pylist():
-                pools[split].append(normalize_answer(item["label"]))
+                pool_rows.append(
+                    {
+                        "split": split,
+                        "question": str(item["query"]),
+                        "answer": normalize_answer(item["label"]),
+                    }
+                )
                 digest = hashlib.sha256(item["image"]).hexdigest()
                 if digest not in split_by_digest or split == "dev":
                     split_by_digest[digest] = split
-    kind_pools: dict[tuple[str, str], list[str]] = {}
-    for split, values in pools.items():
-        for kind in {_answer_kind(value) for value in values}:
-            kind_pools[(split, kind)] = compact_answer_pool(
-                value for value in values if _answer_kind(value) == kind
-            )
+    exact_pools, fallback_pools = compatible_answer_pools(
+        pool_rows, split_key="split", question_key="question", answer_key="answer"
+    )
     image_root = data_root / "processed" / "chartqa" / "images"
     image_root.mkdir(parents=True, exist_ok=True)
 
@@ -555,9 +586,13 @@ def normalize_chartqa(data_root: Path, destination: Path) -> int:
                         image=str(image_path),
                         question=item["query"],
                         answer=item["label"],
-                        answer_pool=kind_pools[
-                            (canonical_split, _answer_kind(str(item["label"])))
-                        ],
+                        answer_pool=compatible_answer_pool(
+                            exact_pools,
+                            fallback_pools,
+                            split=canonical_split,
+                            question=str(item["query"]),
+                            answer=str(item["label"]),
+                        ),
                         license_name="ChartQA/GPL-3.0-review-required",
                         evidence_reference=f"image:{item['imgname']}:row:{current_index}",
                         origin_label_method=(
@@ -709,6 +744,14 @@ def normalize_android_control(data_root: Path, destination: Path) -> int:
                         if action_type in {"click", "long_press"}
                         else target_ids[0]
                     )
+                    if action_type in {"click", "long_press"}:
+                        from PIL import Image
+
+                        with Image.open(io.BytesIO(bytes(screenshots[step]))) as screenshot_image:
+                            if not _usable_gui_target(
+                                candidates, target_id, screenshot_image.size
+                            ):
+                                continue
                     image_path = image_root / f"{episode_id}-{step:04d}.png"
                     if not image_path.exists():
                         image_path.write_bytes(bytes(screenshots[step]))
@@ -818,6 +861,11 @@ def normalize_weblinx(data_root: Path, destination: Path) -> int:
             image = asset_root / demo_name / "screenshots" / selected_row["screenshot"]
             if not image.exists():
                 continue
+            from PIL import Image
+
+            with Image.open(image) as screenshot_image:
+                if not _usable_gui_target(candidates, target, screenshot_image.size):
+                    continue
             yield {
                 "schema_version": 2,
                 "sample_id": f"weblinx:{demo_name}:{turn_index}",

@@ -384,13 +384,27 @@ def _generate_grouped_rewrites(
     destination.parent.mkdir(parents=True, exist_ok=True)
     accepted: list[dict[str, Any]] = []
     accepted_parent_ids: set[str] = set()
+    eligible_parent_ids = {str(sample["sample_id"]) for sample in parents}
     if destination.exists():
+        stored_rows = 0
         for raw in destination.read_text(encoding="utf-8").splitlines():
             if not raw:
                 continue
+            stored_rows += 1
             sample = json.loads(raw)
+            parent_id = str(sample["quality"]["parent_sample_id"])
+            if parent_id not in eligible_parent_ids or parent_id in accepted_parent_ids:
+                continue
             accepted.append(sample)
-            accepted_parent_ids.add(str(sample["quality"]["parent_sample_id"]))
+            accepted_parent_ids.add(parent_id)
+        if len(accepted) != stored_rows:
+            temporary = destination.with_suffix(destination.suffix + ".tmp")
+            with temporary.open("w", encoding="utf-8") as handle:
+                for sample in accepted:
+                    handle.write(
+                        json.dumps(sample, ensure_ascii=False, separators=(",", ":")) + "\n"
+                    )
+            temporary.replace(destination)
     pending = [sample for sample in parents if str(sample["sample_id"]) not in accepted_parent_ids]
     rejected: Counter[str] = Counter()
     attempted = 0
