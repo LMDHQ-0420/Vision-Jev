@@ -41,10 +41,13 @@
 | API 候选 | 至少 3,000 | 3,274 |
 | API 父子不变量违规 | 0 | 0 |
 | 最终问题数 | 120,000 | 120,000 |
+| Pilot 问题数 | 12,000 | 12,000 |
 
 Public manifest SHA-256：`3fe3375cca4cb2756d4345ce163a64e4e60578203f9212ec08e577163ea103c7`。
 
 最终 manifest SHA-256：`b0aa7cfcb3ca965df849303a5146ebdcbb1c7ffafb800d381dfcf2d0b1ebaa42`。
+
+Pilot manifest SHA-256：`b5320b660d737c38cb7b5b0a113461886f85569176927aaa44fdda0e9f94da65`。
 
 ## 失败样本和限制
 
@@ -58,4 +61,4 @@ Public manifest SHA-256：`3fe3375cca4cb2756d4345ce163a64e4e60578203f9212ec08e57
 
 ## 下一步
 
-基于新 120k 清单重新生成训练 pilot，并执行 image-ablation 检查视觉依赖。
+使用新 pilot 重新训练，并执行 image-ablation 检查视觉依赖。
