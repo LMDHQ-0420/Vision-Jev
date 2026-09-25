@@ -46,3 +46,9 @@ accelerate launch --multi_gpu --num_processes 2 --mixed_precision bf16 \
 ```
 
 训练完成后必须运行 `vision-jev eval-sft`，同时报告验证 loss、JSON 合法率、总体 exact match 和三类任务分项 exact match。
+
+仓库也提供可直接运行的独立脚本。`--maximum 0` 表示评测完整 holdout；逐样本预测和汇总文件写入训练 run 目录：
+
+```bash
+python scripts/evaluate_sft.py --maximum 0 --progress-every 25
+```

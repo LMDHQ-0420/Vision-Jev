@@ -236,7 +236,8 @@ def eval_sft_command(args: argparse.Namespace) -> int:
         args.checkpoint,
         args.output,
         model_root=args.model_root,
-        maximum=args.maximum,
+        maximum=args.maximum or None,
+        progress_every=args.progress_every,
     )
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0
@@ -390,7 +391,8 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser.add_argument("--data", type=Path, required=True)
     eval_parser.add_argument("--checkpoint", type=Path, required=True)
     eval_parser.add_argument("--output", type=Path, required=True)
-    eval_parser.add_argument("--maximum", type=int, default=300)
+    eval_parser.add_argument("--maximum", type=int, default=0, help="0 evaluates every row")
+    eval_parser.add_argument("--progress-every", type=int, default=25)
     eval_parser.add_argument(
         "--model-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev/models")
     )

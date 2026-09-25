@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import random
+import statistics
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -142,12 +143,18 @@ def evaluate_checkpoint(
     output_path: Path,
     *,
     model_root: Path = DEFAULT_MODEL_CACHE,
-    maximum: int = 300,
+    maximum: int | None = 300,
+    progress_every: int = 25,
 ) -> dict[str, Any]:
     """Greedy exact-match evaluation for the structured SFT response."""
     from collections import Counter
 
     from peft import PeftModel
+
+    if maximum is not None and maximum < 1:
+        raise ValueError("maximum must be positive or None")
+    if progress_every < 1:
+        raise ValueError("progress_every must be positive")
 
     config = json.loads(config_path.read_text(encoding="utf-8"))
     processor = load_processor(Path(config["model_config"]), model_root)
@@ -157,9 +164,15 @@ def evaluate_checkpoint(
         dtype=torch.bfloat16,
         use_lora=False,
     )
+    if not torch.cuda.is_available():
+        raise RuntimeError("SFT generation evaluation requires a CUDA device")
     model = PeftModel.from_pretrained(base, checkpoint).to("cuda").eval()
     dataset = ManifestDataset(data_path, "eval", maximum, seed=int(config.get("seed", 42)))
     counts: Counter[str] = Counter()
+    source_counts: Counter[str] = Counter()
+    latencies: list[float] = []
+    started = time.monotonic()
+    torch.cuda.reset_peak_memory_stats()
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with output_path.open("w", encoding="utf-8") as output, torch.no_grad():
         for sample_index in range(len(dataset)):
@@ -175,19 +188,23 @@ def evaluate_checkpoint(
                 },
             ).to("cuda")
             input_length = int(batch["input_ids"].shape[1])
+            generation_started = time.monotonic()
             generated = model.generate(  # type: ignore[no-untyped-call]
                 **batch,
                 max_new_tokens=24,
                 do_sample=False,
                 use_cache=True,
             )
+            latencies.append(time.monotonic() - generation_started)
             prediction = processor.decode(
                 generated[0, input_length:], skip_special_tokens=True
             ).strip()
             expected = answer_text(sample)
             task = str(sample["task_type"])
+            source = str(sample["source"])
             counts["questions"] += 1
             counts[f"{task}:questions"] += 1
+            source_counts[f"{source}:questions"] += 1
             try:
                 parsed = json.loads(prediction)
                 syntax_valid = isinstance(parsed, dict)
@@ -198,6 +215,7 @@ def evaluate_checkpoint(
             counts["syntax_valid"] += int(syntax_valid)
             counts["correct"] += int(correct)
             counts[f"{task}:correct"] += int(correct)
+            source_counts[f"{source}:correct"] += int(correct)
             output.write(
                 json.dumps(
                     {
@@ -211,12 +229,38 @@ def evaluate_checkpoint(
                 )
                 + "\n"
             )
+            if (sample_index + 1) % progress_every == 0 or sample_index + 1 == len(dataset):
+                output.flush()
+                print(
+                    json.dumps(
+                        {
+                            "evaluated": sample_index + 1,
+                            "total": len(dataset),
+                            "exact_match": counts["correct"] / (sample_index + 1),
+                            "syntax_valid_rate": counts["syntax_valid"] / (sample_index + 1),
+                        }
+                    ),
+                    flush=True,
+                )
     questions = counts["questions"]
+    if len(latencies) == 1:
+        p50 = p95 = latencies[0]
+    else:
+        percentiles = statistics.quantiles(latencies, n=100, method="inclusive")
+        p50, p95 = percentiles[49], percentiles[94]
     report: dict[str, Any] = {
         "questions": questions,
         "syntax_valid_rate": counts["syntax_valid"] / questions,
         "exact_match": counts["correct"] / questions,
         "by_task": {},
+        "by_source": {},
+        "elapsed_seconds": time.monotonic() - started,
+        "latency_seconds": {
+            "mean": statistics.fmean(latencies),
+            "p50": p50,
+            "p95": p95,
+        },
+        "peak_gpu_memory_bytes": torch.cuda.max_memory_allocated(),
     }
     for task in ("choice", "noul", "score"):
         task_questions = counts[f"{task}:questions"]
@@ -225,6 +269,13 @@ def evaluate_checkpoint(
                 "questions": task_questions,
                 "exact_match": counts[f"{task}:correct"] / task_questions,
             }
+    sources = sorted({key.rsplit(":", 1)[0] for key in source_counts})
+    for source in sources:
+        source_questions = source_counts[f"{source}:questions"]
+        report["by_source"][source] = {
+            "questions": source_questions,
+            "exact_match": source_counts[f"{source}:correct"] / source_questions,
+        }
     output_path.with_suffix(".summary.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
