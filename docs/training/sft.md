@@ -19,7 +19,7 @@
 vision-jev model-prepare --config configs/model/qwen35_08b.json
 ```
 
-图片由模型原生 `AutoProcessor` 处理，每张图最多约 256 个合并视觉 token。问题、可见状态和完整动态候选集合进入 user message；训练 loss 只覆盖 assistant 的紧凑 JSON 答案，不覆盖提示词。Choice/Score 返回候选 ID，Noul 返回布尔值。视觉塔冻结，LoRA 只注入经过白名单审计的语言层 `q/k/v/o_proj`、`in_proj_qkv` 与 `out_proj`。
+图片由模型原生 `AutoProcessor` 处理。普通样本最多约 256 个合并视觉 token，Score 和区域候选样本约 576 个。问题、可见状态和完整动态候选集合进入 user message；训练 loss 只覆盖 assistant 的紧凑 JSON 答案，不覆盖提示词。Choice 返回候选 ID，Noul 返回布尔值，生成式 Score 返回具有明确顺序的整数 1–5。含 box 的候选会把原图坐标归一化到 0–1000 后写入 prompt。视觉塔冻结，LoRA 只注入经过白名单审计的语言层 `q/k/v/o_proj`、`in_proj_qkv` 与 `out_proj`。
 
 12k pilot 从完整 120k manifest 按来源和任务比例确定性抽取，验证集按 `group_id` 隔离：
 
@@ -46,6 +46,8 @@ accelerate launch --multi_gpu --num_processes 2 --mixed_precision bf16 \
 ```
 
 训练完成后必须运行 `vision-jev eval-sft`，同时报告验证 loss、JSON 合法率、总体 exact match 和三类任务分项 exact match。
+
+弱项纠偏从已完成的 pilot adapter 恢复，只训练 KonIQ-10k 和 RefCOCO 三来源；配置见 `configs/train/sft_corrective.json`。该实验用于验证表示修正，不替代后续完整数据重训。
 
 仓库也提供可直接运行的独立脚本。`--maximum 0` 表示评测完整 holdout；逐样本预测和汇总文件写入训练 run 目录：
 

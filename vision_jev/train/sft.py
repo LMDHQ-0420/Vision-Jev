@@ -9,6 +9,7 @@ import random
 import statistics
 import time
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -23,16 +24,57 @@ SYSTEM_PROMPT = (
     "You are Vision-Jev. Read the visual evidence and return only the requested compact JSON."
 )
 
+SCORE_LEVELS = {
+    1: "very poor: lowest quality, with severe visible degradation",
+    2: "poor: below-average quality, with clear degradation",
+    3: "fair: middle quality, with noticeable but limited defects",
+    4: "good: above-average quality, with only minor defects",
+    5: "excellent: highest quality, clean and visually pleasing",
+}
+
 
 def answer_text(sample: dict[str, Any]) -> str:
     task = str(sample["task_type"])
-    value: bool | str
+    value: bool | int | str
     if task == "noul":
         value = bool(sample["target"])
+    elif task == "score":
+        value = int(str(sample["target"]).rsplit("_", 1)[-1])
     else:
         target = sample["target"]
         value = str(target[0] if isinstance(target, list) else target)
     return json.dumps({task: value}, ensure_ascii=False, separators=(",", ":"))
+
+
+@lru_cache(maxsize=4096)
+def _image_size(path: str) -> tuple[int, int]:
+    from PIL import Image
+
+    with Image.open(path) as image:
+        return image.size
+
+
+def _normalized_box(sample: dict[str, Any], box: list[float]) -> list[int]:
+    image = sample.get("image")
+    if not image:
+        return [round(value) for value in box]
+    width, height = _image_size(str(image))
+    scales = (width, height, width, height)
+    return [
+        max(0, min(1000, round(float(value) / scale * 1000)))
+        for value, scale in zip(box, scales, strict=True)
+    ]
+
+
+def _render_options(sample: dict[str, Any]) -> str:
+    rendered: list[str] = []
+    for item in sample.get("options", []):
+        line = f"- {item['id']}: {item['text']}"
+        if "box" in item:
+            coordinates = ",".join(str(value) for value in _normalized_box(sample, item["box"]))
+            line += f"; box_0_1000=[{coordinates}]"
+        rendered.append(line)
+    return "\n".join(rendered)
 
 
 def question_text(sample: dict[str, Any]) -> str:
@@ -43,10 +85,21 @@ def question_text(sample: dict[str, Any]) -> str:
     sections.append(f"Question: {sample['question']}")
     options = sample.get("options", [])
     if options:
-        rendered = "\n".join(f"- {item['id']}: {item['text']}" for item in options)
-        sections.append(f"Candidates:\n{rendered}")
+        sections.append(f"Candidates:\n{_render_options(sample)}")
+    if any("box" in item for item in options):
+        sections.append(
+            "Box coordinates are normalized to 0-1000 as [x1,y1,x2,y2]. "
+            "Match the referring expression against both the image and each candidate box."
+        )
     if sample["task_type"] == "noul":
         sections.append('Return exactly {"noul":true} or {"noul":false}.')
+    elif sample["task_type"] == "score":
+        levels = "\n".join(f"{level} = {meaning}" for level, meaning in SCORE_LEVELS.items())
+        sections.append(
+            "Judge perceptual image quality from blur, noise, exposure, color, compression, "
+            f"and overall appearance. The ordered levels are:\n{levels}"
+        )
+        sections.append('Return exactly {"score":<integer from 1 to 5>}.')
     else:
         sections.append(f'Return exactly {{"{sample["task_type"]}":"<candidate_id>"}}.')
     return "\n\n".join(sections)
@@ -70,17 +123,31 @@ def conversation(sample: dict[str, Any], *, include_answer: bool) -> list[dict[s
 
 
 class ManifestDataset(Dataset[dict[str, Any]]):
-    def __init__(self, path: Path, role: str, maximum: int | None = None, seed: int = 42) -> None:
+    def __init__(
+        self,
+        path: Path,
+        role: str,
+        maximum: int | None = None,
+        seed: int = 42,
+        task_repeat: dict[str, int] | None = None,
+        include_sources: list[str] | None = None,
+    ) -> None:
         rows: list[dict[str, Any]] = []
         with path.open(encoding="utf-8") as handle:
             for raw in handle:
                 if not raw.strip():
                     continue
                 row = json.loads(raw)
-                if row.get("pilot_role", "train") == role:
+                if row.get("pilot_role", "train") == role and (
+                    include_sources is None or str(row["source"]) in include_sources
+                ):
                     rows.append(row)
         rows.sort(key=lambda row: hashlib.sha256(f"{seed}\0{row['sample_id']}".encode()).digest())
-        self.rows = rows[:maximum] if maximum is not None else rows
+        rows = rows[:maximum] if maximum is not None else rows
+        repeat = task_repeat or {}
+        self.rows = [
+            row for row in rows for _ in range(max(1, int(repeat.get(str(row["task_type"]), 1))))
+        ]
         if not self.rows:
             raise ValueError(f"manifest contains no {role!r} rows")
 
@@ -95,6 +162,16 @@ class ManifestDataset(Dataset[dict[str, Any]]):
 class NativeQwenCollator:
     processor: Any
     image_token_target: int = 256
+    region_image_token_target: int = 576
+    score_image_token_target: int = 576
+
+    def visual_budget(self, samples: list[dict[str, Any]]) -> int:
+        budget = self.image_token_target
+        if any(sample["task_type"] == "score" for sample in samples):
+            budget = max(budget, self.score_image_token_target)
+        if any(any("box" in option for option in sample.get("options", [])) for sample in samples):
+            budget = max(budget, self.region_image_token_target)
+        return budget
 
     def __call__(self, samples: list[dict[str, Any]]) -> dict[str, torch.Tensor]:
         full = [conversation(sample, include_answer=True) for sample in samples]
@@ -104,7 +181,7 @@ class NativeQwenCollator:
             "images_kwargs": {
                 "size": {
                     "shortest_edge": 65_536,
-                    "longest_edge": self.image_token_target * 16 * 16 * 4,
+                    "longest_edge": self.visual_budget(samples) * 16 * 16 * 4,
                 }
             },
         }
@@ -168,6 +245,12 @@ def evaluate_checkpoint(
         raise RuntimeError("SFT generation evaluation requires a CUDA device")
     model = PeftModel.from_pretrained(base, checkpoint).to("cuda").eval()
     dataset = ManifestDataset(data_path, "eval", maximum, seed=int(config.get("seed", 42)))
+    collator = NativeQwenCollator(
+        processor,
+        image_token_target=int(config.get("image_token_target", 256)),
+        region_image_token_target=int(config.get("region_image_token_target", 576)),
+        score_image_token_target=int(config.get("score_image_token_target", 576)),
+    )
     counts: Counter[str] = Counter()
     source_counts: Counter[str] = Counter()
     latencies: list[float] = []
@@ -184,7 +267,12 @@ def evaluate_checkpoint(
                 return_dict=True,
                 return_tensors="pt",
                 processor_kwargs={
-                    "images_kwargs": {"size": {"shortest_edge": 65_536, "longest_edge": 262_144}}
+                    "images_kwargs": {
+                        "size": {
+                            "shortest_edge": 65_536,
+                            "longest_edge": collator.visual_budget([sample]) * 16 * 16 * 4,
+                        }
+                    }
                 },
             ).to("cuda")
             input_length = int(batch["input_ids"].shape[1])
@@ -313,22 +401,46 @@ def train_sft(
         mixed_precision="bf16" if config.get("bf16", True) else "no",
     )
     processor = load_processor(Path(config["model_config"]), model_root)
-    model = load_backbone(
-        Path(config["model_config"]),
-        model_root=model_root,
-        dtype=torch.bfloat16 if config.get("bf16", True) else torch.float32,
-        use_lora=True,
-        lora_rank=int(config.get("lora_rank", 16)),
-        lora_alpha=int(config.get("lora_alpha", 32)),
-        lora_dropout=float(config.get("lora_dropout", 0.05)),
-    )
+    initial_adapter = config.get("initial_adapter")
+    if initial_adapter:
+        from peft import PeftModel
+
+        base = load_backbone(
+            Path(config["model_config"]),
+            model_root=model_root,
+            dtype=torch.bfloat16 if config.get("bf16", True) else torch.float32,
+            use_lora=False,
+        )
+        model = PeftModel.from_pretrained(base, Path(initial_adapter), is_trainable=True)
+    else:
+        model = load_backbone(
+            Path(config["model_config"]),
+            model_root=model_root,
+            dtype=torch.bfloat16 if config.get("bf16", True) else torch.float32,
+            use_lora=True,
+            lora_rank=int(config.get("lora_rank", 16)),
+            lora_alpha=int(config.get("lora_alpha", 32)),
+            lora_dropout=float(config.get("lora_dropout", 0.05)),
+        )
     if config.get("gradient_checkpointing", True):
         model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
     model.config.use_cache = False
 
-    train_data = ManifestDataset(data_path, "train", config.get("max_train_questions"), seed=seed)
+    train_data = ManifestDataset(
+        data_path,
+        "train",
+        config.get("max_train_questions"),
+        seed=seed,
+        task_repeat=config.get("task_repeat"),
+        include_sources=config.get("include_sources"),
+    )
     eval_data = ManifestDataset(data_path, "eval", config.get("max_eval_questions"), seed=seed)
-    collator = NativeQwenCollator(processor)
+    collator = NativeQwenCollator(
+        processor,
+        image_token_target=int(config.get("image_token_target", 256)),
+        region_image_token_target=int(config.get("region_image_token_target", 576)),
+        score_image_token_target=int(config.get("score_image_token_target", 576)),
+    )
     generator = torch.Generator().manual_seed(seed)
     train_loader = DataLoader(
         train_data,
