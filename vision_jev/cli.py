@@ -25,7 +25,7 @@ from vision_jev.data.download import (
     materialize_gui_odyssey_subset,
     materialize_weblinx_subset,
 )
-from vision_jev.data.pilot import build_pilot_manifest
+from vision_jev.data.pilot import build_pilot_manifest, build_training_manifest
 from vision_jev.data.pipeline import ADAPTERS, normalize_source
 from vision_jev.tracking import create_run, finalize_run
 
@@ -211,6 +211,17 @@ def data_build_pilot(args: argparse.Namespace) -> int:
     return 0
 
 
+def data_build_training(args: argparse.Namespace) -> int:
+    report = build_training_manifest(
+        args.input,
+        args.output,
+        seed=args.seed,
+        eval_percent=args.eval_percent,
+    )
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
 def model_prepare(args: argparse.Namespace) -> int:
     from vision_jev.model.qwen35 import prepare_snapshot
 
@@ -222,7 +233,13 @@ def model_prepare(args: argparse.Namespace) -> int:
 def train_sft_command(args: argparse.Namespace) -> int:
     from vision_jev.train.sft import train_sft
 
-    summary = train_sft(args.config, args.data, args.output, model_root=args.model_root)
+    summary = train_sft(
+        args.config,
+        args.data,
+        args.output,
+        model_root=args.model_root,
+        resume_from=args.resume_from,
+    )
     print(json.dumps(summary, ensure_ascii=False, indent=2))
     return 0
 
@@ -368,6 +385,15 @@ def build_parser() -> argparse.ArgumentParser:
     pilot_parser.add_argument("--questions", type=int, default=12_000)
     pilot_parser.add_argument("--seed", default="vision-jev-pilot-12k")
     pilot_parser.set_defaults(func=data_build_pilot)
+    training_data_parser = sub.add_parser(
+        "data-build-training",
+        help="assign a complete manifest to deterministic group-safe train/eval roles",
+    )
+    training_data_parser.add_argument("--input", type=Path, required=True)
+    training_data_parser.add_argument("--output", type=Path, required=True)
+    training_data_parser.add_argument("--eval-percent", type=int, default=5)
+    training_data_parser.add_argument("--seed", default="vision-jev-main-120k")
+    training_data_parser.set_defaults(func=data_build_training)
     model_parser = sub.add_parser(
         "model-prepare", help="download the pinned Qwen model snapshot explicitly"
     )
@@ -380,6 +406,11 @@ def build_parser() -> argparse.ArgumentParser:
     train_parser.add_argument("--config", type=Path, required=True)
     train_parser.add_argument("--data", type=Path, required=True)
     train_parser.add_argument("--output", type=Path, required=True)
+    train_parser.add_argument(
+        "--resume-from",
+        type=Path,
+        help="resume adapter, optimizer, scheduler, RNG and data cursor from a checkpoint",
+    )
     train_parser.add_argument(
         "--model-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev/models")
     )

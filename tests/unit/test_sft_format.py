@@ -5,7 +5,14 @@ from pathlib import Path
 
 from PIL import Image
 
-from vision_jev.train.sft import ManifestDataset, NativeQwenCollator, answer_text, question_text
+from vision_jev.train.sft import (
+    EpochRandomSampler,
+    ManifestDataset,
+    NativeQwenCollator,
+    answer_text,
+    question_text,
+    validate_training_config,
+)
 
 
 def test_sft_choice_format_uses_candidate_id() -> None:
@@ -120,3 +127,38 @@ def test_manifest_filters_sources_and_repeats_score(tmp_path: Path) -> None:
     assert len(dataset) == 4
     assert [row["sample_id"] for row in dataset.rows].count("score") == 3
     assert all(row["sample_id"] != "excluded" for row in dataset.rows)
+
+
+def test_training_config_and_epoch_sampler_are_deterministic(tmp_path: Path) -> None:
+    config = {
+        "epochs": 2,
+        "microbatch_questions_per_device": 1,
+        "gradient_accumulation_steps": 32,
+        "global_batch_questions": 32,
+        "learning_rate": 3e-5,
+        "expected_world_size": 1,
+        "checkpoint_every_steps": 250,
+    }
+    validate_training_config(config, world_size=1)
+    manifest = tmp_path / "manifest.jsonl"
+    manifest.write_text(
+        "".join(
+            json.dumps(
+                {
+                    "sample_id": str(index),
+                    "source": "source",
+                    "task_type": "choice",
+                    "pilot_role": "train",
+                }
+            )
+            + "\n"
+            for index in range(8)
+        ),
+        encoding="utf-8",
+    )
+    dataset = ManifestDataset(manifest, "train")
+    sampler = EpochRandomSampler(dataset, seed=42)
+    first = list(sampler)
+    assert first == list(sampler)
+    sampler.set_epoch(1)
+    assert first != list(sampler)

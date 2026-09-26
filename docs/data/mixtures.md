@@ -4,7 +4,7 @@
 
 ## `sft-120k`
 
-构建已完成。最终 manifest 位于外部数据盘 `manifests/sft-120k.jsonl`，共 120,000 条、84,428 个 group，SHA-256 为 `d0ddde7a861f0e9588e6dff37156c3593c7c390747aca84b2fbe254b931f13c8`。public 117k 的 SHA-256 为 `5a3275395e9df1c78ec7a43fcaaabf7fbb540a8a80723eb1528916bcaeac851c`。
+构建已完成。最终 manifest 位于外部数据盘 `manifests/sft-120k.jsonl`，共 120,000 条、82,920 个 group，SHA-256 为 `b0aa7cfcb3ca965df849303a5146ebdcbb1c7ffafb800d381dfcf2d0b1ebaa42`。public 117k 的 SHA-256 为 `3fe3375cca4cb2756d4345ce163a64e4e60578203f9212ec08e577163ea103c7`。
 
 | 数据块 | Choice | Noul | Score | 合计 |
 |---|---:|---:|---:|---:|
@@ -28,6 +28,10 @@
 不设置中英文固定配额：公开数据保留原始语言，API 改写继承父样本语言。Choice 的目标 K 分布仍为：2–4 占 55%，5–8 占 30%，9–16 占 10%，17–32 占 5%；只有在来源原生候选或自动构造负例足够时才纳入对应档位。
 
 任务分布不增加逐条 `task_family`，也不调用 API 分类。来源级近似分布为：GUI/动作 36k、区域/候选定位 24k、关系/科学/组合推理 29k、普通 VQA 8k、OCR 6k、图表 6k、纯文本逻辑 2k、视觉质量 Score 6k、API 改写 3k。它是有意面向项目目标的非均匀分布，不冒充逐题语义统计。
+
+正式训练角色清单为 `manifests/sft-120k-training.jsonl`，由全部 120k 按 `group_id` 确定性分配：训练 114,229 条、验证 5,771 条；同一 group 不跨角色。训练部分为 Choice 91,399、Noul 17,107、Score 5,723，验证部分为 Choice 4,601、Noul 893、Score 277。清单 SHA-256 为 `93c331b4f3416f3e36b47beace9ad8b5d46e6c515bff53b06b53416367b0e6c5`。
+
+三类任务配额有意不相等：Choice 80%、Noul 15%、Score 5%。Score 的 6,000 条全部来自 KonIQ-10k，同一来源机械扩充到三等分会放大重复与来源过拟合。五个 Score 等级本身保持近似均衡；正式训练清单中的训练等级数为 1–5 档分别 1,169/1,115/1,134/1,153/1,152，验证为 55/51/64/43/64。训练器保留 `task_repeat` 开关，但主配置暂不重采样，必须根据完整有序指标再决定。
 
 ## 运行规则
 

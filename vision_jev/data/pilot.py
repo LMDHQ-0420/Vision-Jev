@@ -13,6 +13,88 @@ def _rank(seed: str, value: str) -> bytes:
     return hashlib.sha256(f"{seed}\0{value}".encode()).digest()
 
 
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def build_training_manifest(
+    source: Path,
+    destination: Path,
+    *,
+    seed: str = "vision-jev-main-120k",
+    eval_percent: int = 5,
+) -> dict[str, Any]:
+    """Assign every source row to a deterministic, group-safe train/eval role."""
+    if not 1 <= eval_percent <= 50:
+        raise ValueError("eval_percent must be between 1 and 50")
+
+    groups: set[str] = set()
+    with source.open(encoding="utf-8") as handle:
+        for raw in handle:
+            if raw.strip():
+                groups.add(str(json.loads(raw)["group_id"]))
+    if len(groups) < 2:
+        raise ValueError("training manifest requires at least two groups")
+    eval_groups = {
+        group
+        for group in groups
+        if int.from_bytes(_rank(f"{seed}:eval", group)[:8], "big") % 100 < eval_percent
+    }
+    if not eval_groups:
+        eval_groups.add(min(groups, key=lambda group: _rank(f"{seed}:eval", group)))
+    if eval_groups == groups:
+        eval_groups.remove(max(groups, key=lambda group: _rank(f"{seed}:train", group)))
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_suffix(destination.suffix + ".tmp")
+    role_counts: Counter[str] = Counter()
+    task_counts: Counter[str] = Counter()
+    role_task_counts: dict[str, Counter[str]] = defaultdict(Counter)
+    source_counts: Counter[str] = Counter()
+    with source.open(encoding="utf-8") as input_handle, temporary.open(
+        "w", encoding="utf-8"
+    ) as output:
+        for raw in input_handle:
+            if not raw.strip():
+                continue
+            row = json.loads(raw)
+            role = "eval" if str(row["group_id"]) in eval_groups else "train"
+            row["pilot_role"] = role
+            role_counts[role] += 1
+            task = str(row["task_type"])
+            task_counts[task] += 1
+            role_task_counts[role][task] += 1
+            source_counts[str(row["source"])] += 1
+            output.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
+    temporary.replace(destination)
+
+    report = {
+        "schema_version": 1,
+        "source": str(source),
+        "destination": str(destination),
+        "seed": seed,
+        "eval_percent": eval_percent,
+        "questions": sum(role_counts.values()),
+        "groups": len(groups),
+        "eval_groups": len(eval_groups),
+        "roles": dict(sorted(role_counts.items())),
+        "tasks": dict(sorted(task_counts.items())),
+        "role_tasks": {
+            role: dict(sorted(counts.items())) for role, counts in sorted(role_task_counts.items())
+        },
+        "sources": dict(sorted(source_counts.items())),
+        "sha256": _sha256(destination),
+    }
+    destination.with_suffix(".build-report.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    return report
+
+
 def build_pilot_manifest(
     source: Path,
     destination: Path,
@@ -84,7 +166,7 @@ def build_pilot_manifest(
         "roles": dict(sorted(role_counts.items())),
         "tasks": dict(sorted(task_counts.items())),
         "sources": dict(sorted(source_counts.items())),
-        "sha256": hashlib.sha256(destination.read_bytes()).hexdigest(),
+        "sha256": _sha256(destination),
     }
     destination.with_suffix(".build-report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

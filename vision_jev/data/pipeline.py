@@ -577,7 +577,7 @@ def normalize_chartqa(data_root: Path, destination: Path) -> int:
                         f"{path.name}\0{current_index}\0{item['imgname']}\0"
                         f"{item['query']}\0{item['label']}".encode()
                     ).hexdigest()[:20]
-                    yield open_qa_sample(
+                    sample = open_qa_sample(
                         source="chartqa",
                         source_version="af8b6f5c08c95085271561c2a3f9d15f2b5a9031",
                         split=canonical_split,
@@ -609,6 +609,8 @@ def normalize_chartqa(data_root: Path, destination: Path) -> int:
                             "answer_requires_table_verification": True,
                         },
                     )
+                    if sample is not None:
+                        yield sample
 
     return _write_jsonl(samples(), destination)
 
@@ -941,7 +943,7 @@ def normalize_vqav2(data_root: Path, destination: Path) -> int:
         for row in rows:
             coco_split = "train2014" if row["split"] == "train" else "val2014"
             filename = f"COCO_{coco_split}_{row['image_id']:012d}.jpg"
-            yield open_qa_sample(
+            sample = open_qa_sample(
                 source="vqav2",
                 source_version="v2",
                 split=row["split"],
@@ -969,6 +971,8 @@ def normalize_vqav2(data_root: Path, destination: Path) -> int:
                 evidence_reference=f"question_id:{row['upstream']}",
                 quality={"answer_agreement": row["agreement"], "minimum_required": 8},
             )
+            if sample is not None:
+                yield sample
 
     return _write_jsonl(samples(), destination)
 
@@ -1011,7 +1015,7 @@ def normalize_textvqa(data_root: Path, destination: Path) -> int:
                 / "train_images"
                 / f"{item['image_id']}.jpg"
             )
-            yield open_qa_sample(
+            sample = open_qa_sample(
                 source="textvqa",
                 source_version="0.5.1",
                 split=item["canonical_split"],
@@ -1035,6 +1039,8 @@ def normalize_textvqa(data_root: Path, destination: Path) -> int:
                     "ocr_excluded_from_input": True,
                 },
             )
+            if sample is not None:
+                yield sample
 
     return _write_jsonl(samples(), destination)
 
@@ -1055,7 +1061,7 @@ def normalize_clevr(data_root: Path, destination: Path) -> int:
 
     def samples() -> Iterator[dict[str, Any]]:
         for item in rows:
-            yield open_qa_sample(
+            sample = open_qa_sample(
                 source="clevr",
                 source_version="1.0",
                 split=item["canonical_split"],
@@ -1070,6 +1076,8 @@ def normalize_clevr(data_root: Path, destination: Path) -> int:
                 label_origin="programmatic",
                 origin_label_method="programmatic_scene_generator",
             )
+            if sample is not None:
+                yield sample
 
     return _write_jsonl(samples(), destination)
 
@@ -1088,7 +1096,7 @@ def normalize_gqa(data_root: Path, destination: Path) -> int:
 
     def samples() -> Iterator[dict[str, Any]]:
         for row in rows:
-            yield open_qa_sample(
+            sample = open_qa_sample(
                 source="gqa",
                 source_version="1.2-balanced",
                 split=row["split"],
@@ -1119,6 +1127,8 @@ def normalize_gqa(data_root: Path, destination: Path) -> int:
                 origin_label_method="programmatic_from_scene_graph",
                 quality={"balanced_split": True, "negative_requires_scene_graph_audit": True},
             )
+            if sample is not None:
+                yield sample
 
     return _write_jsonl(samples(), destination)
 

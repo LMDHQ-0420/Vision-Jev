@@ -4,11 +4,11 @@
 
 1. `doctor` 与数据校验；2. 合成张量测试；3. 50–200 样本过拟合；4. 12k pilot；5. 200 步 GPU profile；6. 120k × 2 主训练；7. 独立校准。任一门禁失败就停止扩大。
 
-默认配置见 `configs/train/sft_main.json`：语言 LoRA rank 16/alpha 32/dropout 0.05，头 LR 1e-4，主干 LR 3e-5，global batch 64，BF16，FP32 概率/loss，gradient clipping 1.0。视觉编码器、连接器与 embedding 初始冻结。LoRA target 必须从真实语言层白名单审计，不允许粗暴 `all-linear`。
+默认配置见 `configs/train/sft_main.json`：单卡语言 LoRA rank 16/alpha 32/dropout 0.05，LR 3e-5，global batch 32，BF16，gradient clipping 1.0。视觉编码器冻结。LoRA target 必须从真实语言层白名单审计，不允许粗暴 `all-linear`。
 
-训练目标：Choice CE（多正确答案用负 log 概率和）、Noul BCE、Score CE + 0.1 RPS。先按问题等权；任何任务重权必须有独立消融。保存 best 与 last checkpoint、optimizer/scheduler、RNG 状态、训练样本游标以及逐来源指标。
+当前原生生成式训练对三类任务统一使用 assistant 答案 token loss。Choice 输出候选 ID，Noul 输出布尔值，Score 输出 1–5 整数。Score 除 exact match 外必须报告平均绝对等级误差、相邻一级命中率和混淆矩阵；不能只用严格五分类命中率判断画质能力。先按问题等权；任何任务重采样必须单独记录。
 
-启动训练前 `init-run`；运行命令写入 `commands.log`；过程中追加 JSONL metrics；完成后用 `finalize-run` 写状态与结果。OOM、NaN、数据异常和人工中止也必须 finalize 为 `failed`/`aborted` 并说明。
+启动训练前冻结配置和清单；过程中追加 JSONL metrics。正式配置每 500 个 optimizer step 保存一次可发布 LoRA，以及 Accelerate 模型、优化器、scheduler、随机状态和数据游标；`--resume-from` 从指定 checkpoint 恢复到新的输出目录。恢复能保持 step、loss 和学习率轨迹，但不同 CUDA 进程不承诺逐 bit 相同。
 
 ## Qwen3.5 原生多模态 SFT
 
@@ -30,6 +30,15 @@ vision-jev data-build-pilot \
   --questions 12000 --seed vision-jev-pilot-12k
 ```
 
+完整训练角色清单同样按 group 隔离，并保留全部 120k 条：
+
+```bash
+vision-jev data-build-training \
+  --input /mnt/sda1/sol_data/vision-jev/manifests/sft-120k.jsonl \
+  --output /mnt/sda1/sol_data/vision-jev/manifests/sft-120k-training.jsonl \
+  --eval-percent 5 --seed vision-jev-main-120k
+```
+
 训练门禁命令：
 
 ```bash
@@ -46,6 +55,34 @@ accelerate launch --multi_gpu --num_processes 2 --mixed_precision bf16 \
 ```
 
 训练完成后必须运行 `vision-jev eval-sft`，同时报告验证 loss、JSON 合法率、总体 exact match 和三类任务分项 exact match。
+
+单卡正式训练命令已经准备，但在 Score 排查完成前不执行：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 vision-jev train-sft \
+  --config configs/train/sft_main.json \
+  --data /mnt/sda1/sol_data/vision-jev/manifests/sft-120k-training.jsonl \
+  --output /mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-main
+```
+
+正式训练前用同一数据、batch、视觉预算和优化器执行 200-step profile：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 vision-jev train-sft \
+  --config configs/train/sft_main_profile.json \
+  --data /mnt/sda1/sol_data/vision-jev/manifests/sft-120k-training.jsonl \
+  --output /mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-main-profile
+```
+
+故障恢复必须写入新目录，不能覆盖原 run：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 vision-jev train-sft \
+  --config configs/train/sft_main.json \
+  --data /mnt/sda1/sol_data/vision-jev/manifests/sft-120k-training.jsonl \
+  --output /mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-main-resumed \
+  --resume-from /path/to/checkpoint-step-000500
+```
 
 弱项纠偏从已完成的 pilot adapter 恢复，只训练 KonIQ-10k 和 RefCOCO 三来源；配置见 `configs/train/sft_corrective.json`。该实验用于验证表示修正，不替代后续完整数据重训。
 
