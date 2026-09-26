@@ -24,6 +24,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--progress-every", type=int, default=25)
     parser.add_argument(
+        "--image-ablation",
+        action="store_true",
+        help="replace each visual input with a neutral gray image of the same aspect ratio",
+    )
+    parser.add_argument(
         "--model-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev/models")
     )
     return parser
@@ -39,6 +44,7 @@ def main() -> int:
         model_root=args.model_root,
         maximum=args.maximum or None,
         progress_every=args.progress_every,
+        image_ablation=args.image_ablation,
     )
     print(json.dumps(report, ensure_ascii=False, indent=2))
     return 0
