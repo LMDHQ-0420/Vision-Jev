@@ -112,15 +112,11 @@ def question_text(sample: dict[str, Any]) -> str:
     return "\n\n".join(sections)
 
 
-def conversation(
-    sample: dict[str, Any], *, include_answer: bool, image_override: Any | None = None
-) -> list[dict[str, Any]]:
-    content: list[dict[str, Any]] = []
-    image = image_override if image_override is not None else sample.get("image")
+def conversation(sample: dict[str, Any], *, include_answer: bool) -> list[dict[str, Any]]:
+    content: list[dict[str, str]] = []
+    image = sample.get("image")
     if image:
-        content.append(
-            {"type": "image", "image": image if image_override is not None else str(image)}
-        )
+        content.append({"type": "image", "image": str(image)})
     content.append({"type": "text", "text": question_text(sample)})
     messages: list[dict[str, Any]] = [
         {"role": "system", "content": [{"type": "text", "text": SYSTEM_PROMPT}]},
@@ -131,16 +127,6 @@ def conversation(
             {"role": "assistant", "content": [{"type": "text", "text": answer_text(sample)}]}
         )
     return messages
-
-
-def neutral_image_for_ablation(path: str, maximum_edge: int = 1024) -> Any:
-    """Return a neutral image with the source aspect ratio and bounded memory use."""
-    from PIL import Image
-
-    width, height = _image_size(path)
-    scale = min(1.0, maximum_edge / max(width, height))
-    size = (max(1, round(width * scale)), max(1, round(height * scale)))
-    return Image.new("RGB", size, color=(127, 127, 127))
 
 
 class ManifestDataset(Dataset[dict[str, Any]]):
@@ -243,7 +229,6 @@ def evaluate_checkpoint(
     model_root: Path = DEFAULT_MODEL_CACHE,
     maximum: int | None = 300,
     progress_every: int = 25,
-    image_ablation: bool = False,
 ) -> dict[str, Any]:
     """Greedy exact-match evaluation for the structured SFT response."""
     from collections import Counter
@@ -282,11 +267,8 @@ def evaluate_checkpoint(
     with output_path.open("w", encoding="utf-8") as output, torch.no_grad():
         for sample_index in range(len(dataset)):
             sample = dataset[sample_index]
-            image_override = None
-            if image_ablation and sample.get("image"):
-                image_override = neutral_image_for_ablation(str(sample["image"]))
             batch = processor.apply_chat_template(
-                conversation(sample, include_answer=False, image_override=image_override),
+                conversation(sample, include_answer=False),
                 tokenize=True,
                 add_generation_prompt=True,
                 return_dict=True,
@@ -363,7 +345,6 @@ def evaluate_checkpoint(
         p50, p95 = percentiles[49], percentiles[94]
     report: dict[str, Any] = {
         "questions": questions,
-        "image_ablation": image_ablation,
         "syntax_valid_rate": counts["syntax_valid"] / questions,
         "exact_match": counts["correct"] / questions,
         "by_task": {},

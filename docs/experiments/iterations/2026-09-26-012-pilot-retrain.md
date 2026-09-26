@@ -31,4 +31,4 @@
 - 逐样本结果：`eval-predictions.jsonl`。
 - 汇总：`eval-predictions.summary.json`。
 
-旧 pilot 与新 pilot 的 holdout 已因数据重建发生变化，因此历史指标只作方向性参考，不能视为严格配对实验。视觉依赖对照已完成，结果见 `2026-09-26-013-image-ablation.md`。
+旧 pilot 与新 pilot 的 holdout 已因数据重建发生变化，因此历史指标只作方向性参考，不能视为严格配对实验。

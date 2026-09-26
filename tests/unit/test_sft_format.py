@@ -5,14 +5,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from vision_jev.train.sft import (
-    ManifestDataset,
-    NativeQwenCollator,
-    answer_text,
-    conversation,
-    neutral_image_for_ablation,
-    question_text,
-)
+from vision_jev.train.sft import ManifestDataset, NativeQwenCollator, answer_text, question_text
 
 
 def test_sft_choice_format_uses_candidate_id() -> None:
@@ -93,26 +86,6 @@ def test_sft_region_prompt_contains_normalized_boxes(tmp_path: Path) -> None:
     assert "box_0_1000=[0,0,1000,1000]" in prompt
     collator = NativeQwenCollator(processor=None)
     assert collator.visual_budget([sample]) == 576
-
-
-def test_image_ablation_preserves_aspect_ratio_and_prompt(tmp_path: Path) -> None:
-    image_path = tmp_path / "wide.png"
-    Image.new("RGB", (2000, 1000), color="white").save(image_path)
-    sample = {
-        "task_type": "choice",
-        "target": "a",
-        "question": "Pick one",
-        "state_text": "",
-        "image": str(image_path),
-        "options": [{"id": "a", "text": "first"}],
-    }
-    neutral = neutral_image_for_ablation(str(image_path))
-    assert neutral.size == (1024, 512)
-    assert neutral.getpixel((0, 0)) == (127, 127, 127)
-    messages = conversation(sample, include_answer=False, image_override=neutral)
-    user_content = messages[1]["content"]
-    assert user_content[0]["image"] is neutral
-    assert user_content[1]["text"] == question_text(sample)
 
 
 def test_manifest_filters_sources_and_repeats_score(tmp_path: Path) -> None:

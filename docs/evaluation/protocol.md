@@ -13,7 +13,3 @@ Choice：accuracy、macro-F1、NLL、Brier、高置信错误；Noul 增加不平
 ## 闭环
 
 固定未见 seed，快速 300 episode，最终尽量 1,000 配对 episode并报告置信区间。保存失败轨迹/截图序列。静态 VQA、oracle proposal 与闭环成功率不能汇总成一个含糊总分。
-
-## 视觉消融
-
-使用 `eval-sft --image-ablation` 保持问题、候选、坐标、历史和标签不变，仅将每个视觉输入替换为保持原始宽高比的中性灰图。对照组与消融组必须使用同一 checkpoint、同一 holdout、同一解码参数和视觉 token 配置。报告总体、任务和数据源级准确率变化；下降幅度用于衡量视觉证据对当前评测的实际贡献，不单独等价于完整的视觉理解能力。
