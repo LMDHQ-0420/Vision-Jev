@@ -1,7 +1,7 @@
 # 2026-09-26-014：Score 排查与全量 LoRA 框架
 
 - 状态：structural_check / measured smoke
-- 正式训练状态：未启动
+- 正式训练状态：200-step profile 运行中；全量训练通过 `&&` 成功门禁排队
 - 基座：Qwen3.5-0.8B
 - 方法：单卡 LoRA SFT
 
@@ -35,4 +35,4 @@ KonIQ 标签由 train MOS 五等分位产生，阈值为 2.7048、3.1402、3.415
 
 ## 停止条件
 
-本轮只搭建框架和排查 Score，不启动 120k 正式训练。启动前先确认 Score 指标口径、正式配置、训练清单 hash、GPU 0 空闲和输出目录不存在。
+Score 指标口径、正式配置、训练清单 hash、GPU 0 和输出目录均已检查。`vision-jev-sft-main` tmux 会话先运行 `qwen35-08b-sft-main-profile`；仅当 profile 正常退出时，才自动启动 `qwen35-08b-sft-main`。GPU 1 不参与本项目训练。
