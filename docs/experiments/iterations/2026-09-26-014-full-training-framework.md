@@ -1,7 +1,7 @@
 # 2026-09-26-014：Score 排查与全量 LoRA 框架
 
 - 状态：structural_check / measured smoke
-- 正式训练状态：200-step profile 运行中；全量训练通过 `&&` 成功门禁排队
+- 正式训练状态：单卡全量 LoRA 运行中
 - 基座：Qwen3.5-0.8B
 - 方法：单卡 LoRA SFT
 
@@ -35,4 +35,4 @@ KonIQ 标签由 train MOS 五等分位产生，阈值为 2.7048、3.1402、3.415
 
 ## 停止条件
 
-Score 指标口径、正式配置、训练清单 hash、GPU 0 和输出目录均已检查。`vision-jev-sft-main` tmux 会话先运行 `qwen35-08b-sft-main-profile`；仅当 profile 正常退出时，才自动启动 `qwen35-08b-sft-main`。GPU 1 不参与本项目训练。
+Score 指标口径、正式配置、训练清单 hash、GPU 0 和输出目录均已检查。200-step profile 运行到 step 30 后，按项目所有者要求中止并直接启动正式训练；已完成部分的 loss 从 step 1 的 0.06374 变化到 step 30 的 0.00988，期间出现一次非致命显存分配回退，没有进程崩溃。正式 `qwen35-08b-sft-main` 已在 `vision-jev-sft-main` tmux 会话使用 GPU 0 启动，首个 optimizer step loss 为 0.12463。GPU 1 不参与本项目训练。
