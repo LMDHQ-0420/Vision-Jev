@@ -42,6 +42,9 @@ vision-jev data-rewrite-api \
 vision-jev data-audit-rewrites \
   --candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
   --parents /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl
+vision-jev data-refresh-rewrites \
+  --candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
+  --parents /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl
 vision-jev data-build-final \
   --public /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl \
   --api-candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl
@@ -58,7 +61,7 @@ API 改写只使用 Kimi，不启用 GLM 兜底，并且只改写 `question`；�
 - 开放问答：Choice 干扰项优先从同一问题族、同一答案类型中确定性抽取；无法提供至少一个兼容负例的长尾题直接剔除，不以不相关答案补位。
 - GUI 轨迹：`allowed_history` 必须进入训练 prompt；点击坐标同时命中嵌套区域时，固定选择面积最小的可见区域作为唯一监督目标。区域至少 50% 位于截图内，且不得覆盖超过 90% 的整张截图。
 
-- Mind2Web：只接受 CLICK、可合法确定参数的 TYPE/SELECT；动作前截图与 DOM 坐标一致、目标可见；每个原始动作按唯一 `action_uid` 计数。
+- Mind2Web：只接受 CLICK、可合法确定参数的 TYPE/SELECT；动作前截图与 DOM 坐标一致、目标可见；每个原始动作按唯一 `action_uid` 计数。多重正候选先按最小可见区域确定唯一目标，再从全部非目标 DOM 候选中确定性采样，最终候选不超过 32 个且目标位置确定性打散。
 - AndroidControl：主轨只用高层目标；低层步骤说明另建辅助轨；accessibility tree 不作为纯视觉输入。
 - WebLINX：固定 train 索引，确定性选择并只下载所需 replay/截图；信任上游开源发布内容，不增加 OCR/PII 过滤和发布阻断。
 - VQAv2/TextVQA：唯一答案主池需规范化后至少 8/10 一致，争议项写 quarantine manifest。

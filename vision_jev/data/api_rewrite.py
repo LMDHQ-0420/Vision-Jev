@@ -115,6 +115,39 @@ def audit_rewrites(candidates: Path, parent_manifest: Path) -> dict[str, Any]:
     }
 
 
+def refresh_rewrites(candidates: Path, parent_manifest: Path) -> dict[str, Any]:
+    """Refresh inherited fields from current parents without making API requests."""
+    rows = [json.loads(raw) for raw in candidates.read_text(encoding="utf-8").splitlines() if raw]
+    parent_ids = {str(row.get("quality", {}).get("parent_sample_id", "")) for row in rows}
+    parents: dict[str, dict[str, Any]] = {}
+    with parent_manifest.open(encoding="utf-8") as handle:
+        for raw in handle:
+            if raw.strip():
+                parent = json.loads(raw)
+                parent_id = str(parent["sample_id"])
+                if parent_id in parent_ids:
+                    parents[parent_id] = parent
+    missing = sorted(parent_ids - parents.keys())
+    if missing:
+        raise ValueError(f"rewrite parents are missing from current manifest: {len(missing)}")
+    refreshed: list[dict[str, Any]] = []
+    for row in rows:
+        quality = row["quality"]
+        parent_id = str(quality["parent_sample_id"])
+        provider = str(quality["rewrite_provider"])
+        model = str(quality["rewrite_model"])
+        sample = make_rewrite(parents[parent_id], str(row["question"]), provider, model)
+        if sample["sample_id"] != row["sample_id"]:
+            raise ValueError(f"rewrite identity changed while refreshing {row['sample_id']}")
+        refreshed.append(sample)
+    temporary = candidates.with_suffix(candidates.suffix + ".tmp")
+    with temporary.open("w", encoding="utf-8") as handle:
+        for sample in refreshed:
+            handle.write(json.dumps(sample, ensure_ascii=False, separators=(",", ":")) + "\n")
+    temporary.replace(candidates)
+    return audit_rewrites(candidates, parent_manifest)
+
+
 def _normalized(text: str) -> str:
     return _SPACE.sub(" ", text.strip()).casefold()
 
@@ -385,6 +418,7 @@ def _generate_grouped_rewrites(
     accepted: list[dict[str, Any]] = []
     accepted_parent_ids: set[str] = set()
     eligible_parent_ids = {str(sample["sample_id"]) for sample in parents}
+    parents_by_id = {str(sample["sample_id"]): sample for sample in parents}
     if destination.exists():
         stored_rows = 0
         for raw in destination.read_text(encoding="utf-8").splitlines():
@@ -395,7 +429,9 @@ def _generate_grouped_rewrites(
             parent_id = str(sample["quality"]["parent_sample_id"])
             if parent_id not in eligible_parent_ids or parent_id in accepted_parent_ids:
                 continue
-            accepted.append(sample)
+            parent = parents_by_id[parent_id]
+            refreshed = make_rewrite(parent, str(sample["question"]), provider, model)
+            accepted.append(refreshed)
             accepted_parent_ids.add(parent_id)
         if len(accepted) != stored_rows:
             temporary = destination.with_suffix(destination.suffix + ".tmp")

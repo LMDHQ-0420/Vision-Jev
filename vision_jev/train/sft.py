@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
+import torch.nn.functional as F
 from accelerate import Accelerator  # type: ignore[import-untyped]
 from torch.utils.data import DataLoader, Dataset, Sampler
 from transformers import get_linear_schedule_with_warmup
@@ -224,6 +225,7 @@ class NativeQwenCollator:
     image_token_target: int = 256
     region_image_token_target: int = 576
     score_image_token_target: int = 576
+    max_sequence_tokens: int = 4096
 
     def visual_budget(self, samples: list[dict[str, Any]]) -> int:
         budget = self.image_token_target
@@ -269,8 +271,34 @@ class NativeQwenCollator:
             if not torch.equal(batch["input_ids"][index, :length], prompt_ids):
                 raise ValueError(f"chat-template prefix mismatch for {samples[index]['sample_id']}")
             labels[index, :length] = -100
+        sequence_tokens = int(batch["input_ids"].shape[1])
+        if sequence_tokens > self.max_sequence_tokens:
+            sample_ids = ", ".join(str(sample["sample_id"]) for sample in samples)
+            raise ValueError(
+                f"processed sequence has {sequence_tokens} tokens, exceeding "
+                f"max_sequence_tokens={self.max_sequence_tokens}; samples: {sample_ids}"
+            )
         batch["labels"] = labels
         return dict(batch)
+
+
+def _answer_only_loss(model: Any, batch: dict[str, torch.Tensor]) -> torch.Tensor:
+    """Compute causal-LM logits only where answer labels can contribute to loss."""
+    labels = batch["labels"]
+    supervised = labels.ne(-100)
+    if not bool(supervised.any(dim=1).all()):
+        raise ValueError("every SFT question must contain at least one supervised answer token")
+    first_supervised = supervised.int().argmax(dim=1)
+    first_logit = max(0, int(first_supervised.min().item()) - 1)
+    logits_to_keep = int(labels.shape[1]) - first_logit
+    padded_labels = F.pad(labels, (0, 1), value=-100)
+    shift_labels = padded_labels[:, first_logit + 1 : first_logit + 1 + logits_to_keep]
+    outputs = model(
+        **{key: value for key, value in batch.items() if key != "labels"},
+        logits_to_keep=logits_to_keep,
+    )
+    logits = outputs.logits.float().reshape(-1, outputs.logits.shape[-1])
+    return F.cross_entropy(logits, shift_labels.reshape(-1), ignore_index=-100)
 
 
 def evaluate_checkpoint(
@@ -470,7 +498,7 @@ def _evaluate(model: Any, loader: DataLoader[Any], accelerator: Accelerator, lim
         for index, batch in enumerate(loader):
             if index >= limit:
                 break
-            loss = model(**batch).loss.detach().double()
+            loss = _answer_only_loss(model, batch).detach().double()
             total[0] += loss
             total[1] += 1
     total = accelerator.reduce(total, reduction="sum")
@@ -618,6 +646,7 @@ def train_sft(
         image_token_target=int(config.get("image_token_target", 256)),
         region_image_token_target=int(config.get("region_image_token_target", 576)),
         score_image_token_target=int(config.get("score_image_token_target", 576)),
+        max_sequence_tokens=int(config.get("max_sequence_tokens", 4096)),
     )
     train_sampler = EpochRandomSampler(train_data, seed)
     train_loader = DataLoader(
@@ -688,7 +717,7 @@ def train_sft(
         )
         for batch_index, batch in enumerate(epoch_loader, start=skipped_batches):
             with accelerator.accumulate(model):
-                loss = model(**batch).loss
+                loss = _answer_only_loss(model, batch)
                 accelerator.backward(loss)
                 if accelerator.sync_gradients:
                     accelerator.clip_grad_norm_(

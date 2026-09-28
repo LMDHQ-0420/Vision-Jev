@@ -11,6 +11,7 @@ from vision_jev.data.api_rewrite import (
     _generate_grouped_rewrites,
     audit_rewrites,
     make_rewrite,
+    refresh_rewrites,
     select_parents,
     validate_rewrite,
 )
@@ -115,6 +116,23 @@ class APIRewriteTest(unittest.TestCase):
             selected = select_parents(manifest, choice=2, noul=1)
             self.assertEqual([row["task_type"] for row in selected].count("choice"), 2)
             self.assertEqual([row["task_type"] for row in selected].count("noul"), 1)
+
+    def test_refresh_rewrites_updates_inherited_parent_fields(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            parent = _sample("source:1", "choice")
+            derived = make_rewrite(parent, "Are precisely 2 items not red?", "kimi", "model")
+            parent["options"] = [{"id": "a", "text": "A"}, {"id": "c", "text": "C"}]
+            parent["candidates"] = parent["options"]
+            candidates = root / "candidates.jsonl"
+            parents = root / "parents.jsonl"
+            candidates.write_text(json.dumps(derived) + "\n")
+            parents.write_text(json.dumps(parent) + "\n")
+            report = refresh_rewrites(candidates, parents)
+            saved = json.loads(candidates.read_text())
+            self.assertEqual(report["invariant_violations"], {})
+            self.assertEqual(saved["options"], parent["options"])
+            self.assertEqual(saved["question"], "Are precisely 2 items not red?")
 
     def test_resume_prunes_candidates_from_old_parent_set(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

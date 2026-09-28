@@ -361,21 +361,30 @@ def normalize_mind2web(data_root: Path, destination: Path) -> int:
                     ]
                     if not positive or not negatives:
                         continue
-                    negatives.sort(
-                        key=lambda value: hashlib.sha256(
-                            f"{action_uid}\0{value['id']}".encode()
-                        ).digest()
+                    positive_by_id = {candidate["id"]: candidate for candidate in positive}
+                    target_id = _most_specific_target(
+                        list(positive_by_id.values()), list(positive_by_id)
                     )
                     candidates_by_id = {
-                        candidate["id"]: candidate for candidate in [*positive, *negatives[:31]]
+                        candidate["id"]: candidate for candidate in [*positive, *negatives]
                     }
-                    candidates = list(candidates_by_id.values())
-                    target_ids = [
-                        candidate["id"]
-                        for candidate in positive
-                        if candidate["id"] in candidates_by_id
-                    ]
-                    target_id = _most_specific_target(candidates, target_ids)
+                    other_ids = sorted(
+                        (
+                            candidate_id
+                            for candidate_id in candidates_by_id
+                            if candidate_id != target_id
+                        ),
+                        key=lambda candidate_id: hashlib.sha256(
+                            f"{action_uid}\0select\0{candidate_id}".encode()
+                        ).digest(),
+                    )
+                    selected_ids = [target_id, *other_ids[:31]]
+                    selected_ids.sort(
+                        key=lambda candidate_id: hashlib.sha256(
+                            f"{action_uid}\0order\0{candidate_id}".encode()
+                        ).digest()
+                    )
+                    candidates = [candidates_by_id[candidate_id] for candidate_id in selected_ids]
                     screenshot = item["screenshot"] or {}
                     image_bytes = screenshot.get("bytes")
                     if not image_bytes:

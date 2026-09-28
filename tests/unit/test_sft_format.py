@@ -2,17 +2,41 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
+import torch
 from PIL import Image
 
 from vision_jev.train.sft import (
     EpochRandomSampler,
     ManifestDataset,
     NativeQwenCollator,
+    _answer_only_loss,
     answer_text,
     question_text,
     validate_training_config,
 )
+
+
+def test_answer_only_loss_limits_logits_to_supervised_suffix() -> None:
+    captured: dict[str, object] = {}
+
+    def model(**kwargs: object) -> SimpleNamespace:
+        captured.update(kwargs)
+        kept = int(kwargs["logits_to_keep"])
+        logits = torch.zeros((1, kept, 16))
+        return SimpleNamespace(logits=logits)
+
+    batch = {
+        "input_ids": torch.tensor([[1, 2, 10, 11]]),
+        "attention_mask": torch.ones((1, 4), dtype=torch.long),
+        "labels": torch.tensor([[-100, -100, 10, 11]]),
+    }
+    loss = _answer_only_loss(model, batch)
+    assert torch.isfinite(loss)
+    assert captured["logits_to_keep"] == 3
+    assert "shift_labels" not in captured
+    assert "labels" not in captured
 
 
 def test_sft_choice_format_uses_candidate_id() -> None:

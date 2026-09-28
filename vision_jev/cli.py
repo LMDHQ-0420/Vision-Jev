@@ -15,6 +15,7 @@ from vision_jev.data import DataValidationError, validate_jsonl
 from vision_jev.data.api_rewrite import (
     audit_rewrites,
     generate_rewrites,
+    refresh_rewrites,
     select_parents,
 )
 from vision_jev.data.build import build_final_manifest, build_public_manifest
@@ -200,6 +201,12 @@ def data_audit_rewrites(args: argparse.Namespace) -> int:
     return 0 if not report["invariant_violations"] else 2
 
 
+def data_refresh_rewrites(args: argparse.Namespace) -> int:
+    report = refresh_rewrites(args.candidates, args.parents)
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
 def data_build_pilot(args: argparse.Namespace) -> int:
     report = build_pilot_manifest(
         args.input,
@@ -377,6 +384,13 @@ def build_parser() -> argparse.ArgumentParser:
     audit_parser.add_argument("--candidates", type=Path, required=True)
     audit_parser.add_argument("--parents", type=Path, required=True)
     audit_parser.set_defaults(func=data_audit_rewrites)
+    refresh_parser = sub.add_parser(
+        "data-refresh-rewrites",
+        help="refresh inherited rewrite fields from rebuilt parent samples without API calls",
+    )
+    refresh_parser.add_argument("--candidates", type=Path, required=True)
+    refresh_parser.add_argument("--parents", type=Path, required=True)
+    refresh_parser.set_defaults(func=data_refresh_rewrites)
     pilot_parser = sub.add_parser(
         "data-build-pilot", help="build a deterministic source/task-stratified pilot manifest"
     )
