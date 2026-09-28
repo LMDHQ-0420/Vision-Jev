@@ -1,6 +1,6 @@
 # 2026-09-27-015：全量 LoRA 中断与恢复
 
-- 状态：resume_waiting_for_gpu
+- 状态：resumed_running
 - 原 run：`qwen35-08b-sft-main`
 - 恢复 run：`qwen35-08b-sft-main-resumed-1000`
 - tmux：`vision-jev-sft-main`
@@ -18,3 +18,7 @@ step 1000 checkpoint 已完整保存，包含 LoRA、Accelerate 模型状态、�
 等待日志：`/mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-main-resumed-1000.wait.log`。
 
 训练日志：`/mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-main-resumed-1000.log`。
+
+## 恢复执行
+
+等待任务于 2026-09-27 15:01 首次尝试启动，但 GPU 0 随即被另一个约占 38.61 GiB 的进程使用，本项目首批前向只剩 1.78 GiB 可用并明确 OOM；该尝试没有产生新 optimizer step。2026-09-28 确认两张 GPU 空闲后再次从 step 1000 启动，加入 `expandable_segments` 显存分配配置并继续追加同一日志。第二次恢复已成功加载完整 checkpoint，GPU 0 正常计算；GPU 1 保持空闲。
