@@ -669,13 +669,19 @@ def train_sft(
         weight_decay=float(config.get("weight_decay", 0.01)),
     )
     # Accelerate advances a wrapped scheduler once per process for sharded batches.
-    # The pre-sharding count therefore keeps the global LR curve aligned with all epochs.
-    updates_per_epoch = math.ceil(len(train_loader) / int(config["gradient_accumulation_steps"]))
+    # Optimizer step counts are global; scheduler step counts include that process multiplier.
+    updates_per_epoch = math.ceil(
+        len(train_loader)
+        / (int(config["gradient_accumulation_steps"]) * accelerator.num_processes)
+    )
     total_steps = int(config.get("max_steps") or updates_per_epoch * int(config["epochs"]))
+    scheduler_steps = total_steps * accelerator.num_processes
     scheduler = get_linear_schedule_with_warmup(  # type: ignore[no-untyped-call]
         optimizer,
-        num_warmup_steps=max(1, int(total_steps * float(config.get("warmup_ratio", 0.03)))),
-        num_training_steps=total_steps,
+        num_warmup_steps=max(
+            1, int(scheduler_steps * float(config.get("warmup_ratio", 0.03)))
+        ),
+        num_training_steps=scheduler_steps,
     )
     resume_trainer_state: dict[str, Any] | None = None
     if resume_from is not None:

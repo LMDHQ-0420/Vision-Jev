@@ -56,7 +56,7 @@ accelerate launch --multi_gpu --num_processes 2 --mixed_precision bf16 \
 
 训练完成后必须运行 `vision-jev eval-sft`，同时报告验证 loss、JSON 合法率、总体 exact match 和三类任务分项 exact match。
 
-正式训练由等待脚本在两张卡连续两次处于空闲状态后自动启动：
+正式训练由等待脚本每 10 秒检查两张卡；当两张卡显存占用都低于 10 GiB 时，先执行双卡 2-step smoke test。smoke test 完整通过后才自动启动全量训练，失败则保留日志并停止：
 
 ```bash
 tmux new-session -d -s vision-jev-sft-main \

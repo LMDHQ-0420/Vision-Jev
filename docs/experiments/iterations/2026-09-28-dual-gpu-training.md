@@ -25,10 +25,12 @@ Mind2Web 适配器现先确定唯一目标，再从其余 DOM 节点确定性采
 
 ## 启动策略
 
-单卡 checkpoint 记录 `world_size=1`，与双卡状态不兼容，因此不恢复旧优化器、scheduler 或数据游标。正式训练从头开始，仍使用原完整训练清单。`scripts/wait_for_dual_gpu_sft.sh` 每分钟检查一次两张 GPU，连续两次显存占用均不超过 1024 MiB 后，通过 Accelerate 启动两个进程。等待和训练均在 tmux 中后台进行。
+单卡 checkpoint 记录 `world_size=1`，与双卡状态不兼容，因此不恢复旧优化器、scheduler 或数据游标。正式训练从头开始，仍使用原完整训练清单。`scripts/wait_for_dual_gpu_sft.sh` 每 10 秒检查一次两张 GPU；两张卡显存占用均低于 10 GiB 后，先执行双卡 2-step smoke test，成功后才通过 Accelerate 启动两个正式训练进程。等待和训练均在 tmux 中后台进行。
 
 运行目录：`/mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-main`。
 
 等待日志：`/mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-main.wait.log`。
+
+Smoke test 日志：`/mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-smoke-dual.log`。
 
 训练日志：`/mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-main.log`。
