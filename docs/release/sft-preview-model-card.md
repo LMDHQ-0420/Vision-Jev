@@ -17,9 +17,11 @@ This is an SFT checkpoint, not a completed JEV-like calibrated decision model. I
 
 No project-specific human annotation was introduced. Public labels and 3,000 checked same-language API question rewrites were used. Upstream datasets retain their own licenses and restrictions.
 
-## Evaluation status
+## Evaluation
 
-A 30-question loading and generation smoke test measured 83.33% exact match, 100% JSON validity, 0.401-second mean latency, and 2.10 GB peak allocated GPU memory on one RTX 4090. This sample is too small for model-quality conclusions. Full evaluation on all 5,771 holdout questions is running and will be reported by task and source, including ordinal Score metrics.
+The complete 5,771-question group-safe holdout evaluation measured 85.55% exact match and 100% JSON validity. Choice reached 88.44%, Noul 78.72%, and five-level Score 59.57% exact match. Score mean absolute error was 0.477 levels and 94.58% of predictions were within one level.
+
+On one RTX 4090, sequential end-to-end generation averaged 0.391 seconds per question, with 0.667-second p95 latency and 2.14 GB peak allocated GPU memory. These timings include native image processing and generation but do not represent an optimized batched or native decision-head runtime. Full per-source results and artifact hashes are in `docs/evaluation/sft-preview-results.md`.
 
 ## Files and integrity
 
@@ -31,7 +33,7 @@ The preview is intended for reproducible research on multimodal structured SFT a
 
 ## Next work
 
-- Complete the full SFT holdout evaluation and error analysis.
+- Complete failure-slice and external zero-shot analysis.
 - Connect native Choice/Noul/Score probability heads.
 - Build a group-isolated calibration manifest from unused public data.
 - Implement and document an open RLCD-inspired calibrated-decision objective.

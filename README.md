@@ -48,9 +48,9 @@ The mixture covers GUI actions, region grounding, compositional reasoning, VQA, 
 
 ## Status
 
-The first **Vision-Jev SFT Preview** is now published. It is a Qwen3.5-0.8B language-side LoRA trained for two epochs on 120,000 complete multimodal questions with two RTX 4090 GPUs. The release contains the adapter weights, exact base revision, training configuration, hashes, and model card. Full holdout evaluation is running; its final metrics will replace the clearly marked smoke evidence.
+The first **Vision-Jev SFT Preview** is now published. It is a Qwen3.5-0.8B language-side LoRA trained for two epochs on 120,000 complete multimodal questions with two RTX 4090 GPUs. On the complete 5,771-question group-safe holdout it reaches **85.55% exact match** with **100% valid JSON**: Choice 88.44%, Noul 78.72%, and five-level Score 59.57% exact / 94.58% within one level. Mean single-question latency is 0.391 seconds on one RTX 4090. See the [full SFT results](docs/evaluation/sft-preview-results.md).
 
-This preview generates compact JSON answers. It does not yet expose calibrated native decision probabilities and must not be presented as an RLCD-trained model. RLCD-inspired calibrated-decision post-training remains an explicit TODO. See [the preview model card](docs/release/sft-preview-model-card.md), [weights](release/sft-preview/), and [STATUS.md](STATUS.md).
+This preview generates compact JSON answers. It does not yet expose calibrated native decision probabilities and must not be presented as an RLCD-trained model. The current holdout is an internal source-family regression set, not an external zero-shot benchmark. RLCD-inspired calibrated-decision post-training remains an explicit TODO. See [the preview model card](docs/release/sft-preview-model-card.md), [weights](release/sft-preview/), [evaluation results](docs/evaluation/sft-preview-results.md), and [open visual-JEV evaluation survey](docs/evaluation/open-visual-jev-survey.md).
 
 ## Quick start
 
@@ -121,7 +121,9 @@ Raw data, checkpoints, credentials, and large run artifacts are excluded from Gi
 - [x] Integrate the native Qwen3.5-0.8B processor and backbone
 - [x] Complete small-batch overfitting and the 12k SFT pilot
 - [x] Train the 120k × 2 SFT model and publish the SFT Preview weights
-- [ ] Complete and publish the full 5,771-question SFT holdout evaluation
+- [x] Complete and publish the full 5,771-question SFT holdout evaluation
+- [ ] Publish a contamination-audited external visual evaluation
+- [ ] Publish reproducible shared-image 1/4/10/20-question latency results and a generated visual replay
 - [ ] Implement open RLCD-inspired calibrated-decision post-training
 - [ ] Implement shared-prefix inference and calibration
 - [ ] Train the policy/value branch in closed-loop environments

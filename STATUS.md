@@ -17,7 +17,7 @@
 | RLCD-inspired calibration | TODO | no training code or frozen manifest yet |
 | PPO rollout/update | TODO M5 | transition contract/config/tutorial only |
 | GPU environment smoke test | passed on 2 × RTX 4090 with BF16 matmul | environment baseline |
-| Model accuracy/latency/peak-memory results | smoke measured; full 5,771-question evaluation running | 30-question smoke: 83.33% exact match, 100% valid JSON, 0.401 s mean latency, 2.10 GB peak GPU memory |
+| Model accuracy/latency/peak-memory results | measured on all 5,771 holdout questions | 85.55% exact match, 100% valid JSON, 0.391 s mean / 0.667 s p95, 2.14 GB peak GPU memory |
 | Released weights/model card | SFT Preview published in repository | `release/sft-preview/`, SFT Preview model card |
 
 This file prevents scaffolding from being mistaken for a trained model. Update it only when a linked run provides evidence.
