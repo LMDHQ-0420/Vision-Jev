@@ -3,7 +3,7 @@
   <h3>An open vision-enabled JEV-like model</h3>
   <p>Training code, data recipe, evaluation protocol, and weights — developed in the open.</p>
   <p><a href="README.md">English</a> · <a href="README_CN.md">简体中文</a> · <a href="docs/index.md">Documentation</a> · <a href="LICENSE">Apache-2.0</a></p>
-  <p><img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white"> <img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-2.7%2B-EE4C2C?logo=pytorch&logoColor=white"> <img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-2ea44f"> <img alt="Status" src="https://img.shields.io/badge/status-data%20pipeline-f59e0b"></p>
+  <p><img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white"> <img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-2.7%2B-EE4C2C?logo=pytorch&logoColor=white"> <img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-2ea44f"> <img alt="Status" src="https://img.shields.io/badge/status-SFT%20Preview-2ea44f"></p>
 </div>
 
 ---
@@ -48,9 +48,9 @@ The mixture covers GUI actions, region grounding, compositional reasoning, VQA, 
 
 ## Status
 
-The repository currently provides the data pipeline, canonical schemas, deterministic manifest builder, decision-head prototypes, metrics, experiment tracking, and a validated two-GPU environment. The original ten-source pool contains 3,175,521 canonical questions and a validated 90k core manifest. The five-source public extension has passed a combined pilot.
+The first **Vision-Jev SFT Preview** is now published. It is a Qwen3.5-0.8B language-side LoRA trained for two epochs on 120,000 complete multimodal questions with two RTX 4090 GPUs. The release contains the adapter weights, exact base revision, training configuration, hashes, and model card. Full holdout evaluation is running; its final metrics will replace the clearly marked smoke evidence.
 
-Training results and weights are **not published yet**. Planned results are never presented as measured results; see [STATUS.md](STATUS.md).
+This preview generates compact JSON answers. It does not yet expose calibrated native decision probabilities and must not be presented as an RLCD-trained model. RLCD-inspired calibrated-decision post-training remains an explicit TODO. See [the preview model card](docs/release/sft-preview-model-card.md), [weights](release/sft-preview/), and [STATUS.md](STATUS.md).
 
 ## Quick start
 
@@ -118,9 +118,11 @@ Raw data, checkpoints, credentials, and large run artifacts are excluded from Gi
 - [x] Materialize the full GUI-Odyssey training subset
 - [x] Freeze and validate the 117k public manifest
 - [x] Produce 3k program-verified, same-language API rewrites
-- [ ] Integrate the native Qwen3.5-0.8B processor and backbone
-- [ ] Complete small-batch overfitting and the 12k SFT pilot
-- [ ] Train and evaluate the 120k SFT model
+- [x] Integrate the native Qwen3.5-0.8B processor and backbone
+- [x] Complete small-batch overfitting and the 12k SFT pilot
+- [x] Train the 120k × 2 SFT model and publish the SFT Preview weights
+- [ ] Complete and publish the full 5,771-question SFT holdout evaluation
+- [ ] Implement open RLCD-inspired calibrated-decision post-training
 - [ ] Implement shared-prefix inference and calibration
 - [ ] Train the policy/value branch in closed-loop environments
 - [ ] Publish weights, model card, data card, and reproducibility report

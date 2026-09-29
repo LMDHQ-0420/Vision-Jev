@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate the trained 12k Qwen3.5 SFT pilot on its group-safe holdout."""
+"""Evaluate the released Qwen3.5 SFT adapter on its group-safe holdout."""
 
 from __future__ import annotations
 
@@ -9,13 +9,13 @@ from pathlib import Path
 
 from vision_jev.train.sft import evaluate_checkpoint
 
-DEFAULT_DATA = Path("/mnt/sda1/sol_data/vision-jev/manifests/pilot-12k.jsonl")
-DEFAULT_RUN = Path("/mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-pilot-12k")
+DEFAULT_DATA = Path("/mnt/sda1/sol_data/vision-jev/manifests/sft-120k-training.jsonl")
+DEFAULT_RUN = Path("/mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-main")
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=Path("configs/train/sft_pilot_12k.json"))
+    parser.add_argument("--config", type=Path, default=Path("configs/train/sft_main.json"))
     parser.add_argument("--data", type=Path, default=DEFAULT_DATA)
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_RUN / "checkpoint-last")
     parser.add_argument("--output", type=Path, default=DEFAULT_RUN / "evaluation.jsonl")

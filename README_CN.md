@@ -47,9 +47,9 @@ Vision-Jev 将视觉理解引入 JEV-like 模型范式，并完整开放从数�
 
 ## 当前进度
 
-仓库已经具备数据管线、统一 schema、确定性 manifest 构建器、判断头原型、评测指标、实验追踪和经过验证的双 GPU 环境。原十来源已经转换 3,175,521 道 canonical 问题并生成 90k 核心清单；新五来源联合 pilot 已通过。
+首个 **Vision-Jev SFT Preview** 现已发布。它是在两张 RTX 4090 上使用 120,000 道完整多模态问题训练两轮得到的 Qwen3.5-0.8B 语言侧 LoRA。发布内容包括 adapter 权重、固定基座 revision、训练配置、哈希和模型卡。完整 holdout 测评正在运行，最终指标完成后会替换明确标注的 smoke 结果。
 
-正式训练结果和模型权重**尚未发布**。计划指标不会冒充实测结果，证据状态见 [STATUS.md](STATUS.md)。
+该预览版生成紧凑 JSON 答案，尚未输出经过校准的原生决策概率，不能称为已经完成 RLCD 训练。开源可复现的 RLCD-inspired 校准决策后训练已明确列入 TODO。参见 [SFT Preview 模型卡](docs/release/sft-preview-model-card.md)、[权重目录](release/sft-preview/)和 [STATUS.md](STATUS.md)。
 
 ## 快速开始
 
@@ -117,9 +117,11 @@ tests/              单元测试与集成测试
 - [x] 完成 GUI-Odyssey 正式训练子集截图物化
 - [x] 冻结并验证 117k 公开数据 manifest
 - [x] 生成 3k 程序验证的同语言 API 改写数据
-- [ ] 接入 Qwen3.5-0.8B 原生 processor 和主干
-- [ ] 完成小批量过拟合与 12k SFT pilot
-- [ ] 训练并评测 120k SFT 模型
+- [x] 接入 Qwen3.5-0.8B 原生 processor 和主干
+- [x] 完成小批量过拟合与 12k SFT pilot
+- [x] 完成 120k × 2 SFT 并发布 SFT Preview 权重
+- [ ] 完成并发布 5,771 道完整 SFT holdout 测评
+- [ ] 实现开源可复现的 RLCD-inspired 校准决策后训练
 - [ ] 实现共享前缀推理与概率校准
 - [ ] 在闭环环境中训练 policy/value 分支
 - [ ] 发布模型权重、模型卡、数据卡和复现报告
