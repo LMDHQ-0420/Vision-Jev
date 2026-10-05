@@ -264,6 +264,7 @@ class NativeQwenCollator:
             full,
             tokenize=True,
             add_generation_prompt=False,
+            enable_thinking=False,
             return_dict=True,
             return_tensors="pt",
             processor_kwargs=processor_kwargs,
@@ -272,6 +273,7 @@ class NativeQwenCollator:
             prompts,
             tokenize=True,
             add_generation_prompt=True,
+            enable_thinking=False,
             return_dict=True,
             return_tensors="pt",
             processor_kwargs=processor_kwargs,
@@ -368,6 +370,7 @@ def evaluate_checkpoint(
                 conversation(sample, include_answer=False),
                 tokenize=True,
                 add_generation_prompt=True,
+                enable_thinking=False,
                 return_dict=True,
                 return_tensors="pt",
                 processor_kwargs={

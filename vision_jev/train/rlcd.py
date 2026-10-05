@@ -157,6 +157,7 @@ class FeatureExtractor:
             conversation(sample, include_answer=False),
             tokenize=True,
             add_generation_prompt=True,
+            enable_thinking=False,
             return_dict=True,
             return_tensors="pt",
             processor_kwargs={
