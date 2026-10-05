@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "minimum_syntax_valid_rate": 0.995,
+  "minimum_exact_match": 0.80,
+  "minimum_task_exact_match": {
+    "choice": 0.80,
+    "noul": 0.80
+  },
+  "minimum_score_within_one_accuracy": 0.80
+}

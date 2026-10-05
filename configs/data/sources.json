@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
-  "plan": "Vision-Jev public-data training plan",
-  "reviewed_at": "2026-09-25",
+  "plan": "Vision-Jev public and interactive data plan",
+  "reviewed_at": "2026-10-03",
   "sources": [
     {
       "id": "multimodal_mind2web", "active": true, "priority": 1, "train_quota": 6000,
@@ -137,6 +137,30 @@
       "artifacts": [
         {"name":"images_1024x768","kind":"http","url":"https://datasets.vqa.mmsp-kn.de/archives/koniq10k_1024x768.zip","bytes":5608799013,"extract":true},
         {"name":"scores","kind":"http","url":"https://datasets.vqa.mmsp-kn.de/archives/koniq10k_scores_and_distributions.zip","bytes":303515,"extract":true}
+      ]
+    },
+    {
+      "id": "minigrid", "active": true, "track": "interactive", "priority": 1, "decision_quota": 12000,
+      "homepage": "https://github.com/Farama-Foundation/Minigrid", "license_status": "apache-2.0",
+      "notes": "Pinned v3.1.0 source and environment assets. Generate decisions from disjoint level seeds; never expose oracle state in model inputs.",
+      "artifacts": [
+        {"name":"repository","kind":"http","url":"https://github.com/Farama-Foundation/Minigrid/archive/90928729376741a41222a257911343b97103b548.zip","bytes":10481653,"sha256":"068f17b4a2df6e282414dd46b4cba3edcdb44296d86b1c8b17ee7a372c406a62","revision":"90928729376741a41222a257911343b97103b548","extract":true}
+      ]
+    },
+    {
+      "id": "procgen_maze", "active": true, "track": "interactive", "priority": 2, "decision_quota": 2000,
+      "homepage": "https://github.com/openai/procgen", "license_status": "mit_code_mixed_cc0_cc-by_oga-by_assets",
+      "notes": "Pinned 0.10.7 source. Use only Maze and preserve upstream asset attribution from ASSET_LICENSES.md.",
+      "artifacts": [
+        {"name":"repository","kind":"http","url":"https://github.com/openai/procgen/archive/5e1dbf341d291eff40d1f9e0c0a0d5003643aebf.zip","bytes":32938730,"sha256":"175f4f3737f2ffbc2264ba6f4afe36a7c7625ec10068077daa31ddc6ad5b4253","revision":"5e1dbf341d291eff40d1f9e0c0a0d5003643aebf","extract":true}
+      ]
+    },
+    {
+      "id": "boxoban", "active": true, "track": "interactive", "priority": 2, "decision_quota": 2000,
+      "homepage": "https://github.com/google-deepmind/boxoban-levels", "license_status": "apache-2.0",
+      "notes": "Pinned unfiltered, medium and hard level archive. Preserve upstream split and group every state by level ID.",
+      "artifacts": [
+        {"name":"repository","kind":"http","url":"https://github.com/google-deepmind/boxoban-levels/archive/78011d8c86ad423bfb2e1005012393b4c3c24409.zip","bytes":34150996,"sha256":"e2ca9eb749442c62c1f3b598df43b03b1849b299914ec9f6f6d6bf8a8ed693ed","revision":"78011d8c86ad423bfb2e1005012393b4c3c24409","extract":true}
       ]
     }
   ]

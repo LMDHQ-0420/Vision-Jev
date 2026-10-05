@@ -20,7 +20,19 @@
 | NLVR | 3,000 | 原始 NLVR true/false；六个图像排列保持同组 | CC-BY-4.0 |
 | KonIQ-10k | 6,000 | 原始 c1-c5/MOS 保留；train MOS 五等分位映射五级序数 Score | 研究用途；再发布需复核 |
 
-公开来源合计 117,000。停用来源和本地生成数据不保留在活动数据目录中。剩余 3,000 为 API 同语言改写，细分见 `docs/data/mixtures.md`。
+公开来源合计 117,000。停用来源和本地生成数据不保留在活动数据目录中。
+
+## 交互环境资产
+
+交互轨与上述 117k SFT 公开问题分开计数。MiniGrid v3.1.0、Procgen 0.10.7 和 Boxoban levels 均以精确提交、字节数和 SHA-256 固定在来源账本中。MiniGrid 与 Boxoban 归档为 Apache-2.0；Procgen 代码为 MIT，图像资产保留 `ASSET_LICENSES.md` 中的 CC0、CC-BY 与 OGA-BY 归属记录。
+
+| 来源 | 决策目标 | 用途 |
+|---|---:|---|
+| MiniGrid / BabyAI | 12,000 | 导航、工具、风险与语言指令 |
+| Procgen Maze | 2,000 | 像素风格、地图规模与未见 seed 迁移 |
+| Boxoban | 2,000 | 推箱子、死锁与不可逆长程规划 |
+
+三者下载完成只表示环境和关卡资产可复现；离线状态决策、oracle 标签与在线 rollout 由独立交互管线生成，不冒充 SFT 原始样本。
 
 ## 下载状态口径
 

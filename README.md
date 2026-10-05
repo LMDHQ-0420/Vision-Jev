@@ -30,27 +30,26 @@ The project will publish the data pipeline, exact quotas, source revisions, dete
 
 ## Open data recipe
 
-The target contains **120,000 complete questions** and introduces no project-specific human annotation.
+The SFT mixture contains **117,000 complete public-data questions** and introduces no project-specific human annotation.
 
 | Block | Choice | Noul | Score | Total |
 |---|---:|---:|---:|---:|
 | Public datasets | 94,000 | 17,000 | 6,000 | 117,000 |
-| Same-language API rewrites | 2,000 | 1,000 | 0 | 3,000 |
 | Local synthetic generation | 0 | 0 | 0 | 0 |
-| **Total** | **96,000** | **18,000** | **6,000** | **120,000** |
+| **Total** | **94,000** | **17,000** | **6,000** | **117,000** |
 
-The mixture covers GUI actions, region grounding, compositional reasoning, VQA, OCR, charts, language inference, and visual quality. Public samples preserve their source language; API-assisted samples inherit their parent language and label semantics.
+The mixture covers GUI actions, region grounding, compositional reasoning, VQA, OCR, charts, language inference, and visual quality. Every sample comes from a pinned public source and preserves its source language.
 
 - [Source ledger](docs/data/sources.md)
 - [Mixture specification](docs/data/mixtures.md)
 - [Machine-readable sources](configs/data/sources.json)
-- [Training recipe](configs/data/sft_120k.json)
+- [Training recipe](configs/data/sft_117k.json)
 
 ## Status
 
-The first **Vision-Jev SFT Preview** is now published. It is a Qwen3.5-0.8B language-side LoRA trained for two epochs on 120,000 complete multimodal questions with two RTX 4090 GPUs. On the complete 5,771-question group-safe holdout it reaches **85.55% exact match** with **100% valid JSON**: Choice 88.44%, Noul 78.72%, and five-level Score 59.57% exact / 94.58% within one level. Mean single-question latency is 0.391 seconds on one RTX 4090. See the [full SFT results](docs/evaluation/sft-preview-results.md).
-
-This preview generates compact JSON answers. It does not yet expose calibrated native decision probabilities and must not be presented as an RLCD-trained model. The current holdout is an internal source-family regression set, not an external zero-shot benchmark. RLCD-inspired calibrated-decision post-training remains an explicit TODO. See [the preview model card](docs/release/sft-preview-model-card.md), [weights](release/sft-preview/), [evaluation results](docs/evaluation/sft-preview-results.md), and [open visual-JEV evaluation survey](docs/evaluation/open-visual-jev-survey.md).
+The public-only Qwen3.5-0.8B SFT and static RLCD-inspired runs are complete. The same
+pipeline is now being reproduced on the official Qwen3.5-9B checkpoint; Qwen does not
+publish a Qwen3.5-7B checkpoint.
 
 ## Quick start
 
@@ -74,22 +73,8 @@ vision-jev data-download-weblinx-subset --target-rows 7000
 vision-jev data-download-gui-odyssey-subset --target-rows 8500
 vision-jev data-normalize visual7w
 vision-jev data-build-public \
-  --mixture configs/data/sft_120k.json \
+  --mixture configs/data/sft_117k.json \
   --output /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl
-vision-jev data-rewrite-api \
-  --input /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl \
-  --output /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
-  --choice 2200 --noul 1100 --provider kimi \
-  --minimum-choice 2000 --minimum-noul 1000 \
-  --group-size 60 --min-interval-seconds 21 \
-  --backoff-base-seconds 2 --backoff-cap-seconds 60 \
-  --max-runtime-hours 4.75
-vision-jev data-audit-rewrites \
-  --candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
-  --parents /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl
-vision-jev data-build-final \
-  --public /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl \
-  --api-candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl
 ```
 
 Every JSONL row is one complete question; candidates are never expanded into fake independent samples.
@@ -98,7 +83,7 @@ Every JSONL row is one complete question; candidates are never expanded into fak
 
 ```text
 asset/              Brand assets
-configs/            Data, model, training, evaluation, and API templates
+configs/            Data, model, training, and evaluation templates
 data/               Schemas, public examples, and source metadata
 docs/               Architecture, data, training, evaluation, and release guides
 runs/               Immutable run metadata and external artifact references
@@ -107,7 +92,7 @@ vision_jev/         Data, model, runtime, training, and evaluation code
 tests/              Unit and integration tests
 ```
 
-Raw data, checkpoints, credentials, and large run artifacts are excluded from Git. API keys live only in the ignored, permission-restricted `configs/local/api_keys.toml`; the tracked code never logs or copies them.
+Raw data, checkpoints, and large run artifacts are excluded from Git.
 
 ## Roadmap
 
@@ -117,14 +102,13 @@ Raw data, checkpoints, credentials, and large run artifacts are excluded from Gi
 - [x] Validate the five-source public extension pilot
 - [x] Materialize the full GUI-Odyssey training subset
 - [x] Freeze and validate the 117k public manifest
-- [x] Produce 3k program-verified, same-language API rewrites
 - [x] Integrate the native Qwen3.5-0.8B processor and backbone
 - [x] Complete small-batch overfitting and the 12k SFT pilot
-- [x] Train the 120k × 2 SFT model and publish the SFT Preview weights
-- [x] Complete and publish the full 5,771-question SFT holdout evaluation
+- [x] Train the public-only 117k × 2 SFT model
+- [x] Complete and publish the group-safe SFT holdout evaluation
 - [ ] Publish a contamination-audited external visual evaluation
 - [ ] Publish reproducible shared-image 1/4/10/20-question latency results and a generated visual replay
-- [ ] Implement open RLCD-inspired calibrated-decision post-training
+- [x] Implement open RLCD-inspired calibrated-decision post-training
 - [ ] Implement shared-prefix inference and calibration
 - [ ] Train the policy/value branch in closed-loop environments
 - [ ] Publish weights, model card, data card, and reproducibility report

@@ -9,8 +9,8 @@ from pathlib import Path
 
 from vision_jev.train.sft import evaluate_checkpoint
 
-DEFAULT_DATA = Path("/mnt/sda1/sol_data/vision-jev/manifests/sft-120k-training.jsonl")
-DEFAULT_RUN = Path("/mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-main")
+DEFAULT_DATA = Path("/data/vision-jev/manifests/public-117k-training.jsonl")
+DEFAULT_RUN = Path("/data/vision-jev/runs/qwen35-08b-sft-main-117k")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -24,7 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--progress-every", type=int, default=25)
     parser.add_argument(
-        "--model-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev/models")
+        "--model-root", type=Path, default=Path("/data/vision-jev/models")
     )
     return parser
 

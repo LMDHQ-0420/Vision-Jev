@@ -1,4 +1,6 @@
 .venv/
+.venv-data/
+.venv-procgen/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -25,7 +27,7 @@ runs/*
 .vscode/
 .DS_Store
 
-# Local credentials and machine-specific API configuration
+# Local credentials and machine-specific configuration
 .env
 .env.*
 !.env.example

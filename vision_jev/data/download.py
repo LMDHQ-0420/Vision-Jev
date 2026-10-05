@@ -163,7 +163,7 @@ def download_source(
             if extract and artifact.get("extract", False):
                 _safe_extract(archive, source_root / "extracted" / artifact["name"])
             result_path = archive
-            revision = None
+            revision = artifact.get("revision")
         elif artifact["kind"] == "hf_snapshot":
             from huggingface_hub import snapshot_download
 

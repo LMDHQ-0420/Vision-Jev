@@ -1,11 +1,10 @@
 {
   "schema_version": 2,
-  "mixture_id": "sft-120k",
+  "mixture_id": "sft-117k",
   "unit": "complete_question",
-  "total_questions": 120000,
+  "total_questions": 117000,
   "blocks": {
-    "public": {"questions": 117000, "choice": 94000, "noul": 17000, "score": 6000},
-    "api_assisted": {"questions": 3000, "choice": 2000, "noul": 1000, "score": 0}
+    "public": {"questions": 117000, "choice": 94000, "noul": 17000, "score": 6000}
   },
   "public_source_quotas": {
     "multimodal_mind2web": 6000, "android_control": 16000, "weblinx": 6000,
@@ -31,22 +30,17 @@
     "nlvr": {"noul": 3000},
     "koniq10k": {"score": 6000}
   },
-  "augmentation_quotas": {
-    "same_language_semantic_rewrite": 3000
-  },
   "generation_budget": {
     "public_automated_ingestion": 117000,
     "local_automated_generation": 0,
-    "api_assisted_program_verified": 3000,
     "project_human_annotation": 0
   },
   "language_policy": {
     "public": "preserve_source_language",
-    "api_assisted": "inherit_parent_language",
     "fixed_language_quota": false
   },
   "choice_k_distribution": {"2-4": 0.55, "5-8": 0.30, "9-16": 0.10, "17-32": 0.05},
   "teacher_only_questions": 0,
   "group_split": true,
-  "manifest": "data/manifests/sft-120k.jsonl"
+  "manifest": "data/manifests/public-117k.jsonl"
 }

@@ -25,7 +25,7 @@ def build_training_manifest(
     source: Path,
     destination: Path,
     *,
-    seed: str = "vision-jev-main-120k",
+    seed: str = "vision-jev-main-117k",
     eval_percent: int = 5,
 ) -> dict[str, Any]:
     """Assign every source row to a deterministic, group-safe train/eval role."""

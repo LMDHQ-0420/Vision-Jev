@@ -6,7 +6,7 @@
 
 ## 本轮变更
 
-- 配方升级为 `sft-120k-v2.3`：117k 公开数据 + 3k API 同语言改写。
+- 配方升级为 `sft-117k`：全部使用公开数据。
 - 新增来源：GUI-Odyssey 8k Choice、Visual7W 6k Choice、ScienceQA 4k Choice、NLVR 3k Noul、KonIQ-10k 6k Score。
 - 正式配方中的本地生成数量归零，并从活动 CLI 移除生成命令。
 - 历史 pilot 保留但明确不参与正式训练。

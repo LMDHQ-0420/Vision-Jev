@@ -7,18 +7,11 @@ import json
 import os
 import shutil
 import sys
-from collections import Counter
 from pathlib import Path
 
-from vision_jev.api_keys import DEFAULT_API_KEYS_PATH, load_api_keys
 from vision_jev.data import DataValidationError, validate_jsonl
-from vision_jev.data.api_rewrite import (
-    audit_rewrites,
-    generate_rewrites,
-    refresh_rewrites,
-    select_parents,
-)
-from vision_jev.data.build import build_final_manifest, build_public_manifest
+from vision_jev.data.boxoban_oracle import generate_boxoban
+from vision_jev.data.build import build_public_manifest
 from vision_jev.data.download import (
     download_source,
     inventory,
@@ -26,8 +19,14 @@ from vision_jev.data.download import (
     materialize_gui_odyssey_subset,
     materialize_weblinx_subset,
 )
+from vision_jev.data.dynamic_obstacles import generate_dynamic_obstacles
+from vision_jev.data.interactive import prepare_interactive_assets
+from vision_jev.data.interactive_finalize import finalize_interactive
+from vision_jev.data.interactive_generate import generate_minigrid_navigation
+from vision_jev.data.minigrid_oracles import STAGE_SPECS, generate_minigrid_stage
 from vision_jev.data.pilot import build_pilot_manifest, build_training_manifest
 from vision_jev.data.pipeline import ADAPTERS, normalize_source
+from vision_jev.data.rlcd import build_rlcd_manifest, build_rlcd_training_views
 from vision_jev.tracking import create_run, finalize_run
 
 
@@ -114,6 +113,94 @@ def data_download_gui_odyssey_subset(args: argparse.Namespace) -> int:
     return 0
 
 
+def data_prepare_interactive(args: argparse.Namespace) -> int:
+    root = _root()
+    report = prepare_interactive_assets(
+        args.data_root,
+        root / args.catalog,
+        args.output or args.data_root / "processed" / "interactive",
+    )
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+def data_generate_minigrid_navigation(args: argparse.Namespace) -> int:
+    report = generate_minigrid_navigation(
+        destination=args.output,
+        image_root=args.image_root,
+        questions=args.questions,
+    )
+    validation = validate_jsonl(args.output, check_assets=True)
+    if validation.questions != report["questions"]:
+        raise RuntimeError("interactive generator and validator counts disagree")
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+def data_generate_minigrid_stage(args: argparse.Namespace) -> int:
+    report = generate_minigrid_stage(
+        stage=args.stage,
+        destination=args.output,
+        image_root=args.image_root,
+        max_workers=args.max_workers,
+    )
+    validation = validate_jsonl(args.output, check_assets=True)
+    if validation.questions != report["questions"]:
+        raise RuntimeError("interactive generator and validator counts disagree")
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+def data_generate_boxoban(args: argparse.Namespace) -> int:
+    report = generate_boxoban(
+        level_index=args.level_index,
+        destination=args.output,
+        image_root=args.image_root,
+        max_workers=args.max_workers,
+    )
+    validation = validate_jsonl(args.output, check_assets=True)
+    if validation.questions != report["questions"]:
+        raise RuntimeError("Boxoban generator and validator counts disagree")
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+def data_generate_dynamic_obstacles(args: argparse.Namespace) -> int:
+    report = generate_dynamic_obstacles(
+        destination=args.output,
+        image_root=args.image_root,
+        max_workers=args.max_workers,
+    )
+    validation = validate_jsonl(args.output, check_assets=True)
+    if validation.questions != report["questions"]:
+        raise RuntimeError("dynamic generator and validator counts disagree")
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+def data_finalize_interactive(args: argparse.Namespace) -> int:
+    stage_root = args.data_root / "manifests" / "rlcd-interactive" / "stages"
+    report = finalize_interactive(
+        stage_paths={
+            "minigrid_navigation": stage_root / "minigrid-navigation-4k.jsonl",
+            "minigrid_tools": stage_root / "minigrid-tools-3k.jsonl",
+            "minigrid_hazards_static": stage_root / "minigrid-hazards-static-2250.jsonl",
+            "minigrid_dynamic_obstacles": stage_root / "minigrid-dynamic-obstacles-250.jsonl",
+            "babyai_grounded": stage_root / "babyai-grounded-2500.jsonl",
+            "procgen_maze": stage_root / "procgen-maze-2k.jsonl",
+            "boxoban": stage_root / "boxoban-2k.jsonl",
+        },
+        destination=args.output
+        or args.data_root / "manifests" / "rlcd-interactive" / "base-16k.jsonl",
+        report_root=args.data_root / "manifests" / "rlcd-interactive",
+    )
+    validation = validate_jsonl(report["manifest"], check_assets=True)
+    if validation.questions != report["questions"]:
+        raise RuntimeError("interactive finalizer and validator counts disagree")
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
 def data_normalize(args: argparse.Namespace) -> int:
     destination = args.output or args.data_root / "processed" / args.source / "canonical.jsonl"
     count = normalize_source(args.source, args.data_root, destination)
@@ -139,74 +226,6 @@ def data_build_public(args: argparse.Namespace) -> int:
     return 0
 
 
-def data_rewrite_api(args: argparse.Namespace) -> int:
-    if args.minimum_choice is not None and args.minimum_choice > args.choice:
-        raise ValueError("minimum-choice cannot exceed choice candidates")
-    if args.minimum_noul is not None and args.minimum_noul > args.noul:
-        raise ValueError("minimum-noul cannot exceed noul candidates")
-    if args.max_runtime_hours <= 0 or args.max_runtime_hours >= 5:
-        raise ValueError("max-runtime-hours must be greater than 0 and less than 5")
-    if args.min_interval_seconds < 20:
-        raise ValueError("min-interval-seconds must be at least 20 for the Kimi 3 RPM limit")
-    if args.max_attempts < 1:
-        raise ValueError("max-attempts must be positive")
-    keys = load_api_keys(args.api_keys, required_providers=("kimi",))
-    parents = select_parents(args.input, choice=args.choice, noul=args.noul, seed=args.seed)
-    report = generate_rewrites(
-        parents,
-        keys=keys,
-        destination=args.output,
-        provider=args.provider,
-        max_attempts=args.max_attempts,
-        max_workers=args.max_workers,
-        group_size=args.group_size,
-        min_interval_seconds=args.min_interval_seconds,
-        backoff_base_seconds=args.backoff_base_seconds,
-        backoff_cap_seconds=args.backoff_cap_seconds,
-        max_runtime_seconds=args.max_runtime_hours * 60 * 60,
-    )
-    print(json.dumps(report.__dict__, ensure_ascii=False, indent=2))
-    task_counts: Counter[str] = Counter()
-    if args.output.exists():
-        with args.output.open(encoding="utf-8") as handle:
-            for raw in handle:
-                if raw.strip():
-                    task_counts[str(json.loads(raw)["task_type"])] += 1
-    minimum_choice = args.minimum_choice if args.minimum_choice is not None else args.choice
-    minimum_noul = args.minimum_noul if args.minimum_noul is not None else args.noul
-    return (
-        0 if task_counts["choice"] >= minimum_choice and task_counts["noul"] >= minimum_noul else 2
-    )
-
-
-def data_build_final(args: argparse.Namespace) -> int:
-    try:
-        report = build_final_manifest(
-            public_manifest=args.public,
-            api_candidates=args.api_candidates,
-            mixture_config=args.mixture,
-            destination=args.output,
-            seed=args.seed,
-        )
-    except ValueError as exc:
-        print(f"final manifest build blocked: {exc}", file=sys.stderr)
-        return 2
-    print(json.dumps(report, ensure_ascii=False, indent=2))
-    return 0
-
-
-def data_audit_rewrites(args: argparse.Namespace) -> int:
-    report = audit_rewrites(args.candidates, args.parents)
-    print(json.dumps(report, ensure_ascii=False, indent=2))
-    return 0 if not report["invariant_violations"] else 2
-
-
-def data_refresh_rewrites(args: argparse.Namespace) -> int:
-    report = refresh_rewrites(args.candidates, args.parents)
-    print(json.dumps(report, ensure_ascii=False, indent=2))
-    return 0
-
-
 def data_build_pilot(args: argparse.Namespace) -> int:
     report = build_pilot_manifest(
         args.input,
@@ -226,6 +245,22 @@ def data_build_training(args: argparse.Namespace) -> int:
         eval_percent=args.eval_percent,
     )
     print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
+def data_build_rlcd(args: argparse.Namespace) -> int:
+    report = build_rlcd_manifest(
+        data_root=args.data_root,
+        config_path=args.config,
+        sft_manifests=args.sft_manifest,
+        destination=args.output,
+    )
+    views = build_rlcd_training_views(
+        args.output,
+        args.views_output,
+        seed=str(report["seed"]),
+    )
+    print(json.dumps({"base": report, "training_views": views}, ensure_ascii=False, indent=2))
     return 0
 
 
@@ -267,6 +302,44 @@ def eval_sft_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def train_rlcd_command(args: argparse.Namespace) -> int:
+    from vision_jev.train.rlcd import train_rlcd
+
+    summary = train_rlcd(
+        args.config,
+        args.output,
+        model_root=args.model_root,
+        sft_checkpoint=args.sft_checkpoint,
+        train_manifest=args.train_manifest,
+        role_manifest=args.role_manifest,
+    )
+    if summary:
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+    return 0
+
+
+def eval_rlcd_command(args: argparse.Namespace) -> int:
+    from vision_jev.train.rlcd import evaluate_rlcd_checkpoint
+
+    report = evaluate_rlcd_checkpoint(
+        args.config,
+        args.checkpoint,
+        args.role,
+        args.output,
+        model_root=args.model_root,
+        role_manifest=args.role_manifest,
+        sft_checkpoint=args.sft_checkpoint,
+        maximum=args.maximum or None,
+        progress_every=args.progress_every,
+        thresholds_path=args.thresholds,
+        select_thresholds_path=args.select_thresholds,
+        target_accuracy=args.target_accuracy,
+        minimum_accepted=args.minimum_accepted,
+    )
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="vision-jev")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -294,7 +367,7 @@ def build_parser() -> argparse.ArgumentParser:
     finish_parser.set_defaults(func=finish_run)
     download_parser = sub.add_parser("data-download", help="download fixed dataset artifacts")
     download_parser.add_argument(
-        "--data-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev")
+        "--data-root", type=Path, default=Path("/data/vision-jev")
     )
     download_parser.add_argument("--catalog", type=Path, default=Path("configs/data/sources.json"))
     download_parser.add_argument("--source", action="append")
@@ -302,7 +375,7 @@ def build_parser() -> argparse.ArgumentParser:
     download_parser.set_defaults(func=data_download)
     inventory_parser = sub.add_parser("data-inventory", help="show downloaded dataset state")
     inventory_parser.add_argument(
-        "--data-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev")
+        "--data-root", type=Path, default=Path("/data/vision-jev")
     )
     inventory_parser.set_defaults(func=data_inventory)
     weblinx_parser = sub.add_parser(
@@ -310,7 +383,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="materialize a deterministic train-only WebLINX screenshot subset",
     )
     weblinx_parser.add_argument(
-        "--data-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev")
+        "--data-root", type=Path, default=Path("/data/vision-jev")
     )
     weblinx_parser.add_argument("--target-rows", type=int, default=7000)
     weblinx_parser.add_argument("--seed", default="vision-jev-sft-v2")
@@ -319,15 +392,68 @@ def build_parser() -> argparse.ArgumentParser:
         "data-download-gui-odyssey-subset",
         help="materialize a deterministic train-only GUI-Odyssey screenshot subset",
     )
-    gui_parser.add_argument("--data-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev"))
+    gui_parser.add_argument("--data-root", type=Path, default=Path("/data/vision-jev"))
     gui_parser.add_argument("--target-rows", type=int, default=8500)
     gui_parser.add_argument("--seed", default="vision-jev-sft")
     gui_parser.add_argument("--max-workers", type=int, default=8)
     gui_parser.set_defaults(func=data_download_gui_odyssey_subset)
+    interactive_parser = sub.add_parser(
+        "data-prepare-interactive",
+        help="validate pinned environments and index interactive level assets",
+    )
+    interactive_parser.add_argument(
+        "--data-root", type=Path, default=Path("/data/vision-jev")
+    )
+    interactive_parser.add_argument(
+        "--catalog", type=Path, default=Path("configs/data/sources.json")
+    )
+    interactive_parser.add_argument("--output", type=Path)
+    interactive_parser.set_defaults(func=data_prepare_interactive)
+    navigation_parser = sub.add_parser(
+        "data-generate-minigrid-navigation",
+        help="generate exact-BFS MiniGrid navigation decisions without a model",
+    )
+    navigation_parser.add_argument("--output", type=Path, required=True)
+    navigation_parser.add_argument("--image-root", type=Path, required=True)
+    navigation_parser.add_argument("--questions", type=int, default=4000)
+    navigation_parser.set_defaults(func=data_generate_minigrid_navigation)
+    stage_parser = sub.add_parser(
+        "data-generate-minigrid-stage",
+        help="generate a pinned MiniGrid/BabyAI stage with exact state-search labels",
+    )
+    stage_parser.add_argument("stage", choices=sorted(STAGE_SPECS))
+    stage_parser.add_argument("--output", type=Path, required=True)
+    stage_parser.add_argument("--image-root", type=Path, required=True)
+    stage_parser.add_argument("--max-workers", type=int, default=32)
+    stage_parser.set_defaults(func=data_generate_minigrid_stage)
+    boxoban_parser = sub.add_parser(
+        "data-generate-boxoban", help="generate exact-A* decisions for the pinned Boxoban levels"
+    )
+    boxoban_parser.add_argument("--level-index", type=Path, required=True)
+    boxoban_parser.add_argument("--output", type=Path, required=True)
+    boxoban_parser.add_argument("--image-root", type=Path, required=True)
+    boxoban_parser.add_argument("--max-workers", type=int, default=32)
+    boxoban_parser.set_defaults(func=data_generate_boxoban)
+    dynamic_parser = sub.add_parser(
+        "data-generate-dynamic-obstacles",
+        help="generate Monte Carlo policy decisions for stochastic dynamic obstacles",
+    )
+    dynamic_parser.add_argument("--output", type=Path, required=True)
+    dynamic_parser.add_argument("--image-root", type=Path, required=True)
+    dynamic_parser.add_argument("--max-workers", type=int, default=24)
+    dynamic_parser.set_defaults(func=data_generate_dynamic_obstacles)
+    finalize_parser = sub.add_parser(
+        "data-finalize-interactive", help="merge and audit all pinned interactive stages"
+    )
+    finalize_parser.add_argument(
+        "--data-root", type=Path, default=Path("/data/vision-jev")
+    )
+    finalize_parser.add_argument("--output", type=Path)
+    finalize_parser.set_defaults(func=data_finalize_interactive)
     normalize_parser = sub.add_parser("data-normalize", help="convert raw data to canonical JSONL")
     normalize_parser.add_argument("source", choices=sorted(ADAPTERS))
     normalize_parser.add_argument(
-        "--data-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev")
+        "--data-root", type=Path, default=Path("/data/vision-jev")
     )
     normalize_parser.add_argument("--output", type=Path)
     normalize_parser.set_defaults(func=data_normalize)
@@ -335,62 +461,16 @@ def build_parser() -> argparse.ArgumentParser:
         "data-build-public", help="build the configured public-data manifest or report shortages"
     )
     build_parser.add_argument(
-        "--data-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev")
+        "--data-root", type=Path, default=Path("/data/vision-jev")
     )
-    build_parser.add_argument("--mixture", type=Path, default=Path("configs/data/sft_120k.json"))
+    build_parser.add_argument("--mixture", type=Path, default=Path("configs/data/sft_117k.json"))
     build_parser.add_argument(
         "--output",
         type=Path,
-        default=Path("/mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl"),
+        default=Path("/data/vision-jev/manifests/public-117k.jsonl"),
     )
     build_parser.add_argument("--seed", default="vision-jev-sft")
     build_parser.set_defaults(func=data_build_public)
-    rewrite_parser = sub.add_parser(
-        "data-rewrite-api", help="create checked same-language API question rewrites"
-    )
-    rewrite_parser.add_argument("--input", type=Path, required=True)
-    rewrite_parser.add_argument("--output", type=Path, required=True)
-    rewrite_parser.add_argument("--choice", type=int, required=True)
-    rewrite_parser.add_argument("--noul", type=int, required=True)
-    rewrite_parser.add_argument("--minimum-choice", type=int)
-    rewrite_parser.add_argument("--minimum-noul", type=int)
-    rewrite_parser.add_argument("--provider", choices=["kimi"], default="kimi")
-    rewrite_parser.add_argument("--max-attempts", type=int, default=5)
-    rewrite_parser.add_argument("--max-workers", type=int, choices=[1], default=1)
-    rewrite_parser.add_argument("--group-size", type=int, default=60)
-    rewrite_parser.add_argument("--min-interval-seconds", type=float, default=21.0)
-    rewrite_parser.add_argument("--backoff-base-seconds", type=float, default=2.0)
-    rewrite_parser.add_argument("--backoff-cap-seconds", type=float, default=60.0)
-    rewrite_parser.add_argument("--max-runtime-hours", type=float, default=4.75)
-    rewrite_parser.add_argument("--seed", default="vision-jev-api-rewrite")
-    rewrite_parser.add_argument("--api-keys", type=Path, default=DEFAULT_API_KEYS_PATH)
-    rewrite_parser.set_defaults(func=data_rewrite_api)
-    final_parser = sub.add_parser(
-        "data-build-final", help="join exact public and API-assisted quotas"
-    )
-    final_parser.add_argument("--public", type=Path, required=True)
-    final_parser.add_argument("--api-candidates", type=Path, required=True)
-    final_parser.add_argument("--mixture", type=Path, default=Path("configs/data/sft_120k.json"))
-    final_parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path("/mnt/sda1/sol_data/vision-jev/manifests/sft-120k.jsonl"),
-    )
-    final_parser.add_argument("--seed", default="vision-jev-sft")
-    final_parser.set_defaults(func=data_build_final)
-    audit_parser = sub.add_parser(
-        "data-audit-rewrites", help="verify every API rewrite against its public parent"
-    )
-    audit_parser.add_argument("--candidates", type=Path, required=True)
-    audit_parser.add_argument("--parents", type=Path, required=True)
-    audit_parser.set_defaults(func=data_audit_rewrites)
-    refresh_parser = sub.add_parser(
-        "data-refresh-rewrites",
-        help="refresh inherited rewrite fields from rebuilt parent samples without API calls",
-    )
-    refresh_parser.add_argument("--candidates", type=Path, required=True)
-    refresh_parser.add_argument("--parents", type=Path, required=True)
-    refresh_parser.set_defaults(func=data_refresh_rewrites)
     pilot_parser = sub.add_parser(
         "data-build-pilot", help="build a deterministic source/task-stratified pilot manifest"
     )
@@ -406,14 +486,28 @@ def build_parser() -> argparse.ArgumentParser:
     training_data_parser.add_argument("--input", type=Path, required=True)
     training_data_parser.add_argument("--output", type=Path, required=True)
     training_data_parser.add_argument("--eval-percent", type=int, default=5)
-    training_data_parser.add_argument("--seed", default="vision-jev-main-120k")
+    training_data_parser.add_argument("--seed", default="vision-jev-main-117k")
     training_data_parser.set_defaults(func=data_build_training)
+    rlcd_parser = sub.add_parser(
+        "data-build-rlcd",
+        help="freeze group-safe RLCD roots and deterministic train views",
+    )
+    rlcd_parser.add_argument(
+        "--data-root", type=Path, default=Path("/data/vision-jev")
+    )
+    rlcd_parser.add_argument(
+        "--config", type=Path, default=Path("configs/data/rlcd_72k.json")
+    )
+    rlcd_parser.add_argument("--sft-manifest", type=Path, action="append", required=True)
+    rlcd_parser.add_argument("--output", type=Path, required=True)
+    rlcd_parser.add_argument("--views-output", type=Path, required=True)
+    rlcd_parser.set_defaults(func=data_build_rlcd)
     model_parser = sub.add_parser(
         "model-prepare", help="download the pinned Qwen model snapshot explicitly"
     )
     model_parser.add_argument("--config", type=Path, default=Path("configs/model/qwen35_08b.json"))
     model_parser.add_argument(
-        "--model-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev/models")
+        "--model-root", type=Path, default=Path("/data/vision-jev/models")
     )
     model_parser.set_defaults(func=model_prepare)
     train_parser = sub.add_parser("train-sft", help="run answer-only multimodal Qwen SFT")
@@ -426,7 +520,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="resume adapter, optimizer, scheduler, RNG and data cursor from a checkpoint",
     )
     train_parser.add_argument(
-        "--model-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev/models")
+        "--model-root", type=Path, default=Path("/data/vision-jev/models")
     )
     train_parser.set_defaults(func=train_sft_command)
     eval_parser = sub.add_parser(
@@ -439,9 +533,40 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser.add_argument("--maximum", type=int, default=0, help="0 evaluates every row")
     eval_parser.add_argument("--progress-every", type=int, default=25)
     eval_parser.add_argument(
-        "--model-root", type=Path, default=Path("/mnt/sda1/sol_data/vision-jev/models")
+        "--model-root", type=Path, default=Path("/data/vision-jev/models")
     )
     eval_parser.set_defaults(func=eval_sft_command)
+    rlcd_train_parser = sub.add_parser(
+        "train-rlcd", help="train calibrated decision heads on frozen SFT features"
+    )
+    rlcd_train_parser.add_argument("--config", type=Path, required=True)
+    rlcd_train_parser.add_argument("--output", type=Path, required=True)
+    rlcd_train_parser.add_argument("--sft-checkpoint", type=Path)
+    rlcd_train_parser.add_argument("--train-manifest", type=Path)
+    rlcd_train_parser.add_argument("--role-manifest", type=Path)
+    rlcd_train_parser.add_argument(
+        "--model-root", type=Path, default=Path("/data/vision-jev/models")
+    )
+    rlcd_train_parser.set_defaults(func=train_rlcd_command)
+    rlcd_eval_parser = sub.add_parser(
+        "eval-rlcd", help="evaluate frozen calibrated decision heads by RLCD role"
+    )
+    rlcd_eval_parser.add_argument("--config", type=Path, required=True)
+    rlcd_eval_parser.add_argument("--checkpoint", type=Path, required=True)
+    rlcd_eval_parser.add_argument("--role", choices=["threshold", "audit", "test"], required=True)
+    rlcd_eval_parser.add_argument("--output", type=Path, required=True)
+    rlcd_eval_parser.add_argument("--role-manifest", type=Path)
+    rlcd_eval_parser.add_argument("--sft-checkpoint", type=Path)
+    rlcd_eval_parser.add_argument("--maximum", type=int, default=0, help="0 evaluates every row")
+    rlcd_eval_parser.add_argument("--progress-every", type=int, default=100)
+    rlcd_eval_parser.add_argument("--thresholds", type=Path)
+    rlcd_eval_parser.add_argument("--select-thresholds", type=Path)
+    rlcd_eval_parser.add_argument("--target-accuracy", type=float, default=0.95)
+    rlcd_eval_parser.add_argument("--minimum-accepted", type=int, default=25)
+    rlcd_eval_parser.add_argument(
+        "--model-root", type=Path, default=Path("/data/vision-jev/models")
+    )
+    rlcd_eval_parser.set_defaults(func=eval_rlcd_command)
     return parser
 
 

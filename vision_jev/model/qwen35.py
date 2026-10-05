@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any, cast
 
-DEFAULT_MODEL_CACHE = Path("/mnt/sda1/sol_data/vision-jev/models")
+DEFAULT_MODEL_CACHE = Path("/data/vision-jev/models")
 
 
 def load_model_config(path: Path) -> dict[str, Any]:

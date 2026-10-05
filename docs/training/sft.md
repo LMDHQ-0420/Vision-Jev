@@ -2,7 +2,7 @@
 
 ## 门禁顺序
 
-1. `doctor` 与数据校验；2. 合成张量测试；3. 50–200 样本过拟合；4. 12k pilot；5. 200 步 GPU profile；6. 120k × 2 主训练；7. 独立校准。任一门禁失败就停止扩大。
+1. `doctor` 与数据校验；2. 合成张量测试；3. 50–200 样本过拟合；4. 12k pilot；5. 200 步 GPU profile；6. 117k × 2 主训练；7. 独立校准。任一门禁失败就停止扩大。
 
 默认配置见 `configs/train/sft_main.json`：双卡 DDP 语言 LoRA rank 16/alpha 32/dropout 0.05，每卡 microbatch 1、累积 16 步，global batch 32，LR 3e-5，BF16，gradient clipping 1.0。视觉编码器冻结。LoRA target 必须从真实语言层白名单审计，不允许粗暴 `all-linear`。
 
@@ -13,30 +13,34 @@
 ## Qwen3.5 原生多模态 SFT
 
 首个主干固定为 `Qwen/Qwen3.5-0.8B` revision
-`2fc06364715b967f1860aea9cf38778875588b17`。模型必须先通过显式 prepare 命令下载到数据盘，训练代码只使用本地快照，不在模型构造期间联网：
+`2fc06364715b967f1860aea9cf38778875588b17`。大模型复现采用同一官方多模态架构的
+`Qwen/Qwen3.5-9B` revision `c202236235762e1c871ad0ccb60c8ee5ba337b9a`；官方没有
+Qwen3.5-7B。模型必须先通过显式 prepare 命令下载到数据盘，训练代码只使用本地快照，
+不在模型构造期间联网：
 
 ```bash
 vision-jev model-prepare --config configs/model/qwen35_08b.json
+vision-jev model-prepare --config configs/model/qwen35_9b.json
 ```
 
 图片由模型原生 `AutoProcessor` 处理。普通样本最多约 256 个合并视觉 token，Score 和区域候选样本约 576 个；处理后的总序列不得超过 4096 token。问题、可见状态和完整动态候选集合进入 user message；训练 loss 只覆盖 assistant 的紧凑 JSON 答案，不覆盖提示词，语言输出层也只计算可能参与答案 loss 的末尾区间，避免为整段视觉 prompt 分配全词表 logits。Choice 返回候选 ID，Noul 返回布尔值，生成式 Score 返回具有明确顺序的整数 1–5。含 box 的候选会把原图坐标归一化到 0–1000 后写入 prompt。视觉塔冻结，LoRA 只注入经过白名单审计的语言层 `q/k/v/o_proj`、`in_proj_qkv` 与 `out_proj`。
 
-12k pilot 从完整 120k manifest 按来源和任务比例确定性抽取，验证集按 `group_id` 隔离：
+12k pilot 从完整 117k manifest 按来源和任务比例确定性抽取，验证集按 `group_id` 隔离：
 
 ```bash
 vision-jev data-build-pilot \
-  --input /mnt/sda1/sol_data/vision-jev/manifests/sft-120k.jsonl \
-  --output /mnt/sda1/sol_data/vision-jev/manifests/pilot-12k.jsonl \
+  --input /data/vision-jev/manifests/public-117k.jsonl \
+  --output /data/vision-jev/manifests/pilot-12k.jsonl \
   --questions 12000 --seed vision-jev-pilot-12k
 ```
 
-完整训练角色清单同样按 group 隔离，并保留全部 120k 条：
+完整训练角色清单同样按 group 隔离，并保留全部 117k 条：
 
 ```bash
 vision-jev data-build-training \
-  --input /mnt/sda1/sol_data/vision-jev/manifests/sft-120k.jsonl \
-  --output /mnt/sda1/sol_data/vision-jev/manifests/sft-120k-training.jsonl \
-  --eval-percent 5 --seed vision-jev-main-120k
+  --input /data/vision-jev/manifests/public-117k.jsonl \
+  --output /data/vision-jev/manifests/public-117k-training.jsonl \
+  --eval-percent 5 --seed vision-jev-main-117k
 ```
 
 训练门禁命令：
@@ -44,14 +48,14 @@ vision-jev data-build-training \
 ```bash
 vision-jev train-sft \
   --config configs/train/sft_overfit.json \
-  --data /mnt/sda1/sol_data/vision-jev/manifests/pilot-12k.jsonl \
-  --output /mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-overfit-32
+  --data /data/vision-jev/manifests/pilot-12k.jsonl \
+  --output /data/vision-jev/runs/qwen35-08b-overfit-32
 
 accelerate launch --multi_gpu --num_processes 2 --mixed_precision bf16 \
   -m vision_jev.cli train-sft \
   --config configs/train/sft_pilot_12k.json \
-  --data /mnt/sda1/sol_data/vision-jev/manifests/pilot-12k.jsonl \
-  --output /mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-pilot-12k
+  --data /data/vision-jev/manifests/pilot-12k.jsonl \
+  --output /data/vision-jev/runs/qwen35-08b-sft-pilot-12k
 ```
 
 训练完成后必须运行 `vision-jev eval-sft`，同时报告验证 loss、JSON 合法率、总体 exact match 和三类任务分项 exact match。
@@ -69,8 +73,8 @@ tmux new-session -d -s vision-jev-sft-main \
 CUDA_VISIBLE_DEVICES=0,1 accelerate launch --multi_gpu --num_processes 2 \
   --mixed_precision bf16 -m vision_jev.cli train-sft \
   --config configs/train/sft_main_profile.json \
-  --data /mnt/sda1/sol_data/vision-jev/manifests/sft-120k-training.jsonl \
-  --output /mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-main-profile-dual
+  --data /data/vision-jev/manifests/public-117k-training.jsonl \
+  --output /data/vision-jev/runs/qwen35-08b-sft-main-profile-dual
 ```
 
 故障恢复必须保持相同进程数，并写入新目录，不能覆盖原 run：
@@ -78,8 +82,8 @@ CUDA_VISIBLE_DEVICES=0,1 accelerate launch --multi_gpu --num_processes 2 \
 ```bash
 CUDA_VISIBLE_DEVICES=0 vision-jev train-sft \
   --config configs/train/sft_main.json \
-  --data /mnt/sda1/sol_data/vision-jev/manifests/sft-120k-training.jsonl \
-  --output /mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-main-resumed \
+  --data /data/vision-jev/manifests/public-117k-training.jsonl \
+  --output /data/vision-jev/runs/qwen35-08b-sft-main-117k-resumed \
   --resume-from /path/to/checkpoint-step-000500
 ```
 
@@ -89,4 +93,13 @@ CUDA_VISIBLE_DEVICES=0 vision-jev train-sft \
 
 ```bash
 python scripts/evaluate_sft.py --maximum 0 --progress-every 25
+```
+
+完整的可恢复顺序流水线会依次执行模型准备、双卡 SFT smoke、完整 SFT、holdout 门禁、
+双卡 RLCD smoke、完整 RLCD、threshold、audit 和一次性 test。已有 `summary.json` 的阶段
+会跳过，存在半成品目录则停止而不是覆盖：
+
+```bash
+bash scripts/run_model_pipeline.sh 08b /data/vision-jev
+bash scripts/run_model_pipeline.sh 9b /data/vision-jev
 ```

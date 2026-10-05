@@ -33,7 +33,7 @@ Vision-Jev 当前完成的是第一阶段内部 holdout 测评和逐题生成式
 - 总体与 Choice/Noul/Score 分项结果；
 - 每来源结果，Score 同时报 exact、MAE 和相邻一级内准确率；
 - JSON 合法率、失败样本和可复核的输出文件 SHA-256；
-- 当前结果见 [SFT Preview完整测评](sft-preview-results.md)。
+- 当前 117k SFT 完成后再发布内部与外部评测结果。
 
 它用于版本回归，不称为外部 zero-shot。
 

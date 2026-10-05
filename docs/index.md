@@ -4,9 +4,9 @@
 
 1. [产品与研究范围](project-plan.md)
 2. [系统架构](architecture/system.md)、[仓库架构](architecture/repository.md) 与 [接口语义](architecture/interfaces.md)
-3. [数据来源](data/sources.md)、[数据管线](data/pipeline.md) 与 [混合配方](data/mixtures.md)
-4. [SFT 运行手册](training/sft.md)、[PPO 运行手册](training/ppo.md)、[实验追踪](experiments/README.md)
-5. [评测协议](evaluation/protocol.md)、[开源视觉 JEV 评测调研](evaluation/open-visual-jev-survey.md) 与 [发布清单](release/checklist.md)
+3. [数据来源](data/sources.md)、[数据管线](data/pipeline.md)、[混合配方](data/mixtures.md)、[RLCD-inspired 数据计划](data/rlcd.md)、[简单场景启动集](data/rlcd-simple-scenarios.md) 与 [交互场景计划](data/rlcd-interactive-scenarios.md)
+4. [SFT 运行手册](training/sft.md)、[RLCD-inspired 运行手册](training/rlcd.md)、[PPO 运行手册](training/ppo.md)、[实验追踪](experiments/README.md)
+5. [评测协议](evaluation/protocol.md)、[SFT 117k holdout 结果](evaluation/sft-main-117k-results.md)、[开源视觉 JEV 评测调研](evaluation/open-visual-jev-survey.md) 与 [发布清单](release/checklist.md)
 
 本机开发环境的实际版本、双 GPU smoke test 与沙箱边界见 [环境基线](development/environment-baseline.md)。
 

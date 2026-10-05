@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "plan_id": "rlcd-inspired-72k-v1",
+  "reviewed_at": "2026-10-03",
+  "unit": "unique_root_question",
+  "total_root_questions": 72000,
+  "sft_overlap_policy": {
+    "train": "may_reuse_public_sft_train_roots",
+    "evaluation_roles": "must_use_roots_absent_from_every_sft_manifest"
+  },
+  "roles": {
+    "train": {
+      "schema_split": "train",
+      "questions": 48000,
+      "choice": 34000,
+      "noul": 9000,
+      "score": 5000
+    },
+    "dev": {
+      "schema_split": "dev",
+      "questions": 6000,
+      "choice": 4200,
+      "noul": 1200,
+      "score": 600
+    },
+    "calibration": {
+      "schema_split": "calibration",
+      "questions": 3000,
+      "choice": 2100,
+      "noul": 600,
+      "score": 300
+    },
+    "threshold": {
+      "schema_split": "calibration",
+      "questions": 2000,
+      "choice": 1400,
+      "noul": 400,
+      "score": 200
+    },
+    "audit": {
+      "schema_split": "calibration",
+      "questions": 1000,
+      "choice": 700,
+      "noul": 200,
+      "score": 100
+    },
+    "test": {
+      "schema_split": "test",
+      "questions": 12000,
+      "choice": 8400,
+      "noul": 2400,
+      "score": 1200
+    }
+  },
+  "training_views": {
+    "canonical": 1,
+    "candidate_permutations": 2,
+    "label_preserving_stress_view": 1,
+    "maximum_views_per_root": 4,
+    "accounting_rule": "views_and_rollouts_never_count_as_new_root_questions"
+  },
+  "selection": {
+    "public_labels_only": true,
+    "group_by": ["root_id", "group_id"],
+    "stratify_by": ["task_type", "source", "source_bucket", "candidate_k", "language"],
+    "maximum_train_share_per_source": 0.2,
+    "source_cap_exceptions": ["score_requires_a_recorded_exception_until_a_second_iqa_source_exists"]
+  },
+  "artifacts": {
+    "base_manifest": "manifests/rlcd/base-72k.jsonl",
+    "view_manifest": "manifests/rlcd/train-views.jsonl",
+    "rollouts": "rollouts/rlcd/<policy_revision>/*.jsonl",
+    "split_report": "manifests/rlcd/split-report.json",
+    "leakage_report": "manifests/rlcd/leakage-report.json"
+  },
+  "seed": "vision-jev-rlcd-v1"
+}

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "plan_id": "rlcd-interactive-16k-v1",
+  "status": "planned",
+  "reviewed_at": "2026-10-03",
+  "unit": "unique_environment_state_decision",
+  "total_root_decisions": 16000,
+  "accounting": "separate_from_rlcd_72k_static_roots_and_online_rollouts",
+  "source_quotas": {
+    "minigrid_navigation": {"questions": 4000, "choice": 3200, "noul": 800},
+    "minigrid_tools": {"questions": 3000, "choice": 2400, "noul": 600},
+    "minigrid_hazards": {"questions": 2500, "choice": 1600, "noul": 900},
+    "babyai_grounded": {"questions": 2500, "choice": 2000, "noul": 500},
+    "procgen_maze": {"questions": 2000, "choice": 1600, "noul": 400},
+    "boxoban": {"questions": 2000, "choice": 1600, "noul": 400}
+  },
+  "roles": {
+    "train": {"questions": 10000, "choice": 7750, "noul": 2250},
+    "dev": {"questions": 1500, "choice": 1160, "noul": 340},
+    "calibration": {"questions": 1500, "choice": 1160, "noul": 340},
+    "threshold": {"questions": 750, "choice": 580, "noul": 170},
+    "audit": {"questions": 750, "choice": 580, "noul": 170},
+    "test": {"questions": 1500, "choice": 1170, "noul": 330}
+  },
+  "curriculum": [
+    "empty_fourrooms_multiroom",
+    "doorkey_unlock_pickup",
+    "lavacrossing_dynamic_obstacles",
+    "babyai_goto_pickup_open",
+    "procgen_maze",
+    "boxoban"
+  ],
+  "targets": {
+    "choice": "all_actions_with_oracle_q_within_epsilon_of_optimal",
+    "noul": "candidate_action_preserves_success_within_remaining_horizon",
+    "value": "separate_normalized_expected_return_target_not_score"
+  },
+  "split_policy": {
+    "group_by": ["environment_id", "level_seed", "mission"],
+    "unseen_seed_roles": ["dev", "calibration", "threshold", "audit", "test"],
+    "seed_overlap_allowed": false,
+    "online_evaluation_not_counted_as_roots": true
+  },
+  "artifacts": {
+    "root_manifest": "manifests/rlcd-interactive/base-16k.jsonl",
+    "environment_index": "processed/interactive/environment-index.json",
+    "boxoban_levels": "processed/interactive/boxoban-levels.jsonl",
+    "oracle_report": "manifests/rlcd-interactive/oracle-report.json",
+    "leakage_report": "manifests/rlcd-interactive/seed-leakage-report.json",
+    "rollouts": "rollouts/interactive/<policy_revision>/*.jsonl"
+  },
+  "seed": "vision-jev-rlcd-interactive-v1"
+}

@@ -29,27 +29,25 @@ Vision-Jev 将视觉理解引入 JEV-like 模型范式，并完整开放从数�
 
 ## 开放数据配方
 
-训练目标为 **120,000 道完整问题**，本项目新增人工标注为 0。
+SFT 数据包含 **117,000 道公开来源完整问题**，本项目新增人工标注为 0。
 
 | 数据块 | Choice | Noul | Score | 合计 |
 |---|---:|---:|---:|---:|
 | 公开数据集 | 94,000 | 17,000 | 6,000 | 117,000 |
-| API 同语言改写 | 2,000 | 1,000 | 0 | 3,000 |
 | 本地合成 | 0 | 0 | 0 | 0 |
-| **合计** | **96,000** | **18,000** | **6,000** | **120,000** |
+| **合计** | **94,000** | **17,000** | **6,000** | **117,000** |
 
-数据覆盖 GUI 操作、区域定位、组合推理、VQA、OCR、图表理解、文本逻辑和视觉质量。公开数据保留原始语言；API 样本继承父样本语言和标签语义。
+数据覆盖 GUI 操作、区域定位、组合推理、VQA、OCR、图表理解、文本逻辑和视觉质量。全部样本来自固定版本的公开来源，并保留原始语言。
 
 - [数据来源账本](docs/data/sources.md)
 - [数据混合方案](docs/data/mixtures.md)
 - [机器可读来源](configs/data/sources.json)
-- [训练配方](configs/data/sft_120k.json)
+- [训练配方](configs/data/sft_117k.json)
 
 ## 当前进度
 
-首个 **Vision-Jev SFT Preview** 现已发布。它是在两张 RTX 4090 上使用 120,000 道完整多模态问题训练两轮得到的 Qwen3.5-0.8B 语言侧 LoRA。在完整的 5,771 道 group-safe holdout 上，模型达到 **85.55% exact match** 和 **100% JSON 合法率**：Choice 88.44%，Noul 78.72%，五档 Score 严格准确率 59.57%、相邻一级内准确率 94.58%。单张 RTX 4090 的平均单题延迟为 0.391 秒。详见[完整SFT结果](docs/evaluation/sft-preview-results.md)。
-
-该预览版生成紧凑 JSON 答案，尚未输出经过校准的原生决策概率，不能称为已经完成 RLCD 训练。当前 holdout 是同来源族内部回归集，不是外部 zero-shot 基准。开源可复现的 RLCD-inspired 校准决策后训练已明确列入 TODO。参见 [SFT Preview 模型卡](docs/release/sft-preview-model-card.md)、[权重目录](release/sft-preview/)、[完整评测结果](docs/evaluation/sft-preview-results.md)和[开源视觉 JEV 评测调研](docs/evaluation/open-visual-jev-survey.md)。
+公开数据 117k 的 Qwen3.5-0.8B SFT 与静态 RLCD-inspired 训练已经完成。当前使用同一
+流水线复现官方 Qwen3.5-9B；Qwen 官方没有发布 Qwen3.5-7B checkpoint。
 
 ## 快速开始
 
@@ -73,22 +71,8 @@ vision-jev data-download-weblinx-subset --target-rows 7000
 vision-jev data-download-gui-odyssey-subset --target-rows 8500
 vision-jev data-normalize visual7w
 vision-jev data-build-public \
-  --mixture configs/data/sft_120k.json \
+  --mixture configs/data/sft_117k.json \
   --output /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl
-vision-jev data-rewrite-api \
-  --input /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl \
-  --output /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
-  --choice 2200 --noul 1100 --provider kimi \
-  --minimum-choice 2000 --minimum-noul 1000 \
-  --group-size 60 --min-interval-seconds 21 \
-  --backoff-base-seconds 2 --backoff-cap-seconds 60 \
-  --max-runtime-hours 4.75
-vision-jev data-audit-rewrites \
-  --candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl \
-  --parents /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl
-vision-jev data-build-final \
-  --public /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl \
-  --api-candidates /mnt/sda1/sol_data/vision-jev/processed/api_rewrite/candidates.jsonl
 ```
 
 每行 JSONL 代表一道完整问题，不会把 K 个候选拆成 K 条虚假样本。
@@ -97,7 +81,7 @@ vision-jev data-build-final \
 
 ```text
 asset/              项目视觉资产
-configs/            数据、模型、训练、评测和 API 模板
+configs/            数据、模型、训练和评测模板
 data/               Schema、公开样例和来源元数据
 docs/               架构、数据、训练、评测和发布文档
 runs/               不可变运行记录和外部大文件引用
@@ -106,7 +90,7 @@ vision_jev/         数据、模型、运行时、训练和评测代码
 tests/              单元测试与集成测试
 ```
 
-原始数据、checkpoint、密钥和大型运行产物不会提交 Git。API 密钥只放在被 Git 忽略且限制文件权限的 `configs/local/api_keys.toml`；仓库代码不会打印或复制密钥。
+原始数据、checkpoint 和大型运行产物不会提交 Git。
 
 ## TODO / Roadmap
 
@@ -116,14 +100,13 @@ tests/              单元测试与集成测试
 - [x] 验证新五来源联合 pilot
 - [x] 完成 GUI-Odyssey 正式训练子集截图物化
 - [x] 冻结并验证 117k 公开数据 manifest
-- [x] 生成 3k 程序验证的同语言 API 改写数据
 - [x] 接入 Qwen3.5-0.8B 原生 processor 和主干
 - [x] 完成小批量过拟合与 12k SFT pilot
-- [x] 完成 120k × 2 SFT 并发布 SFT Preview 权重
-- [x] 完成并发布 5,771 道完整 SFT holdout 测评
+- [x] 完成公开数据 117k × 2 SFT
+- [x] 完成并发布 group-safe SFT holdout 测评
 - [ ] 发布经过污染审计的外部视觉测评
 - [ ] 发布可复现的共享图像 1/4/10/20 题延迟结果与自动生成的可视化回放
-- [ ] 实现开源可复现的 RLCD-inspired 校准决策后训练
+- [x] 实现开源可复现的 RLCD-inspired 校准决策后训练
 - [ ] 实现共享前缀推理与概率校准
 - [ ] 在闭环环境中训练 policy/value 分支
 - [ ] 发布模型权重、模型卡、数据卡和复现报告

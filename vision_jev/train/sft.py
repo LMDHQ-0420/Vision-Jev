@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import random
 import statistics
 import time
@@ -32,6 +33,18 @@ SCORE_LEVELS = {
     4: "good: above-average quality, with only minor defects",
     5: "excellent: highest quality, clean and visually pleasing",
 }
+
+
+def _set_process_name(name: str) -> None:
+    if not name:
+        return
+    try:
+        import ctypes
+
+        libc = ctypes.CDLL(None)
+        libc.prctl(15, name.encode("utf-8")[:15], 0, 0, 0)
+    except (AttributeError, OSError):
+        return
 
 
 def validate_training_config(config: dict[str, Any], world_size: int) -> None:
@@ -601,6 +614,7 @@ def train_sft(
         gradient_accumulation_steps=int(config["gradient_accumulation_steps"]),
         mixed_precision="bf16" if config.get("bf16", True) else "no",
     )
+    _set_process_name(os.environ.get("VISION_JEV_PROCESS_NAME", ""))
     validate_training_config(config, accelerator.num_processes)
     if output_dir.exists() and any(output_dir.iterdir()):
         raise FileExistsError(f"training output already exists and is not empty: {output_dir}")
@@ -712,6 +726,27 @@ def train_sft(
     started = time.monotonic()
     last_loss = resume_trainer_state.get("last_train_loss") if resume_trainer_state else None
     checkpoint_every = int(config.get("checkpoint_every_steps", 0))
+    if accelerator.is_main_process:
+        print(
+            json.dumps(
+                {
+                    "event": "training_started",
+                    "stage": config.get("stage"),
+                    "world_size": accelerator.num_processes,
+                    "train_questions": len(train_data),
+                    "eval_questions": len(eval_data),
+                    "epochs": int(config["epochs"]),
+                    "total_steps": total_steps,
+                    "global_batch_questions": (
+                        int(config["microbatch_questions_per_device"])
+                        * int(config["gradient_accumulation_steps"])
+                        * accelerator.num_processes
+                    ),
+                    "output": str(output_dir),
+                }
+            ),
+            flush=True,
+        )
     model.train()
     for epoch in range(start_epoch, int(config["epochs"])):
         train_sampler.set_epoch(epoch)
@@ -750,7 +785,13 @@ def train_sft(
                     }
                     with metrics_path.open("a", encoding="utf-8") as handle:
                         handle.write(json.dumps(record) + "\n")
+                    print(json.dumps({"event": "train_metrics", **record}), flush=True)
                 if checkpoint_every and step % checkpoint_every == 0:
+                    if accelerator.is_main_process:
+                        print(
+                            json.dumps({"event": "checkpoint_started", "step": step}),
+                            flush=True,
+                        )
                     _save_training_checkpoint(
                         output_dir / f"checkpoint-step-{step:06d}",
                         accelerator=accelerator,
@@ -768,11 +809,18 @@ def train_sft(
                             "elapsed_seconds": elapsed_offset + time.monotonic() - started,
                         },
                     )
+                    if accelerator.is_main_process:
+                        print(
+                            json.dumps({"event": "checkpoint_completed", "step": step}),
+                            flush=True,
+                        )
                 if step >= total_steps:
                     break
         resume_batches = 0
         if step >= total_steps:
             break
+    if accelerator.is_main_process:
+        print(json.dumps({"event": "evaluation_started", "step": step}), flush=True)
     eval_loss = _evaluate(model, eval_loader, accelerator, int(config.get("eval_batches", 50)))
     accelerator.wait_for_everyone()
     if last_loss is None:
@@ -813,5 +861,6 @@ def train_sft(
         (output_dir / "summary.json").write_text(
             json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
         )
+        print(json.dumps({"event": "training_completed", **summary}), flush=True)
     accelerator.wait_for_everyone()
     return summary
