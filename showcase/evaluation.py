@@ -35,8 +35,7 @@ def verify_showcase_selection(
             (root / "confidence-thresholds.json").read_text(encoding="utf-8")
         )
         thresholds[group] = {
-            task: float(values["threshold"])
-            for task, values in threshold_data["by_task"].items()
+            task: float(values["threshold"]) for task, values in threshold_data["by_task"].items()
         }
 
     report: dict[str, Any] = {}
@@ -60,17 +59,49 @@ def verify_showcase_selection(
             eligible, key=lambda value: hashlib.sha256(value.encode("utf-8")).hexdigest()
         )
         if selected != example.sample_id:
-            raise ValueError(
-                f"showcase selection mismatch for {example.id}: expected {selected}"
-            )
+            raise ValueError(f"showcase selection mismatch for {example.id}: expected {selected}")
         report[example.id] = {"sample_id": selected, "eligible_samples": len(eligible)}
     return report
+
+
+def _load_generation_evaluations(
+    manifest: Path,
+    expected_questions: int,
+    evaluations: dict[str, Path],
+    stage: str,
+) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    manifest_digest = sha256_file(manifest)
+    for group, root in evaluations.items():
+        predictions_path = root / "test.jsonl"
+        summary_path = root / "test.summary.json"
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        if int(summary["questions"]) != expected_questions:
+            raise ValueError(f"{stage} test question count mismatch for {group}")
+        if summary["manifest_sha256"] != manifest_digest:
+            raise ValueError(f"{stage} manifest hash mismatch for {group}")
+        predictions_digest = sha256_file(predictions_path)
+        if summary["predictions_sha256"] != predictions_digest:
+            raise ValueError(f"{stage} prediction hash mismatch for {group}")
+        result[group] = {
+            "summary": summary,
+            "artifacts": {
+                "predictions": str(predictions_path),
+                "predictions_sha256": predictions_digest,
+                "summary": str(summary_path),
+                "summary_sha256": sha256_file(summary_path),
+            },
+        }
+    return result
 
 
 def build_static_test_report(
     manifest: Path,
     evaluations: dict[str, Path],
     destination: Path,
+    *,
+    baseline_evaluations: dict[str, Path] | None = None,
+    sft_evaluations: dict[str, Path] | None = None,
 ) -> dict[str, Any]:
     sample_sources: dict[str, str] = {}
     with manifest.open(encoding="utf-8") as handle:
@@ -107,10 +138,15 @@ def build_static_test_report(
             raise ValueError(f"test question count mismatch for {group}")
         by_source: dict[str, dict[str, Any]] = {}
         for (source, task), (count, correct) in sorted(source_totals.items()):
-            by_source.setdefault(source, {})[task] = {
+            source_metric = {
                 "questions": count,
                 "accuracy": correct / count,
             }
+            recorded_source = summary.get("by_source", {}).get(source, {})
+            recorded_task = recorded_source.get("by_task", {}).get(task, {})
+            if recorded_task.get("latency_ms") is not None:
+                source_metric["latency_ms"] = recorded_task["latency_ms"]
+            by_source.setdefault(source, {})[task] = source_metric
         models[group] = {
             "summary": summary,
             "thresholds": thresholds,
@@ -122,11 +158,19 @@ def build_static_test_report(
                 "summary_sha256": sha256_file(summary_path),
             },
         }
+    baselines = _load_generation_evaluations(
+        manifest, len(sample_sources), baseline_evaluations or {}, "baseline"
+    )
+    sft_models = _load_generation_evaluations(
+        manifest, len(sample_sources), sft_evaluations or {}, "SFT"
+    )
     report = {
         "schema_version": 1,
         "protocol": "frozen_static_rlcd_test",
         "manifest": str(manifest),
         "manifest_sha256": sha256_file(manifest),
+        "baselines": baselines,
+        "sft_models": sft_models,
         "models": models,
     }
     write_json(destination, report)

@@ -4,6 +4,7 @@ import torch
 
 from vision_jev.train.rlcd import (
     DecisionHeads,
+    _attach_latency,
     _source_threshold_reports,
     calibrated_probabilities,
     decision_loss,
@@ -88,3 +89,16 @@ def test_source_threshold_reports_keep_sources_separate() -> None:
     report = _source_threshold_reports(records, thresholds)
     assert report["minigrid"]["choice"]["accuracy"] == 1.0
     assert report["boxoban"]["choice"]["accuracy"] == 0.0
+
+
+def test_latency_is_attached_to_overall_and_task_reports() -> None:
+    report = {"by_task": {"choice": {}, "noul": {}}}
+    records = [
+        {"task_type": "choice", "latency_ms": 10.0},
+        {"task_type": "choice", "latency_ms": 30.0},
+        {"task_type": "noul", "latency_ms": 5.0},
+    ]
+    _attach_latency(report, records)
+    assert report["latency_ms"]["total_ms"] == 45.0
+    assert report["by_task"]["choice"]["latency_ms"]["mean_ms"] == 20.0
+    assert report["by_task"]["noul"]["latency_ms"]["p99_ms"] == 5.0

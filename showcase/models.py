@@ -38,7 +38,7 @@ def _normalize_generated(task: str, value: Any, sample: dict[str, Any]) -> Predi
     return value if isinstance(value, str) and value in options else None
 
 
-class QwenBaseAdapter:
+class QwenGenerationAdapter:
     def __init__(self, spec: ModelSpec, model_root: Path) -> None:
         import torch
 
@@ -48,9 +48,15 @@ class QwenBaseAdapter:
             raise RuntimeError("showcase inference requires CUDA")
         self.torch = torch
         self.processor = load_processor(spec.model_config, model_root)
-        self.model = load_backbone(
+        model = load_backbone(
             spec.model_config, model_root=model_root, dtype=torch.bfloat16, use_lora=False
-        ).to("cuda").eval()
+        )
+        if spec.kind == "qwen_sft":
+            from peft import PeftModel
+
+            assert spec.sft_checkpoint is not None
+            model = PeftModel.from_pretrained(model, spec.sft_checkpoint)
+        self.model = model.to("cuda").eval()
 
     def predict(self, sample: dict[str, Any]) -> Prediction:
         from vision_jev.train.sft import NativeQwenCollator, conversation
@@ -81,9 +87,7 @@ class QwenBaseAdapter:
             )
         self.torch.cuda.synchronize()
         latency_ms = (time.perf_counter() - started) * 1000
-        raw = self.processor.decode(
-            generated[0, input_length:], skip_special_tokens=True
-        ).strip()
+        raw = self.processor.decode(generated[0, input_length:], skip_special_tokens=True).strip()
         task = str(sample["task_type"])
         value: PredictionValue = None
         try:
@@ -140,14 +144,15 @@ class VisionJevAdapter:
         task = str(sample["task_type"])
         self.torch.cuda.synchronize()
         started = time.perf_counter()
-        with self.torch.no_grad(), self.torch.autocast(
-            device_type="cuda", dtype=self.torch.bfloat16
+        with (
+            self.torch.no_grad(),
+            self.torch.autocast(device_type="cuda", dtype=self.torch.bfloat16),
         ):
             question, candidates, mask = self.extractor(sample)
             logits, _ = self.heads(task, question, candidates, mask)
-        values = calibrated_probabilities(
-            task, logits, float(self.temperatures[task])
-        ).float().cpu()
+        values = (
+            calibrated_probabilities(task, logits, float(self.temperatures[task])).float().cpu()
+        )
         self.torch.cuda.synchronize()
         latency_ms = (time.perf_counter() - started) * 1000
         if task == "noul":
@@ -167,8 +172,8 @@ class VisionJevAdapter:
 
 
 def load_adapter(spec: ModelSpec, model_root: Path) -> ModelAdapter:
-    if spec.kind == "qwen_base":
-        return QwenBaseAdapter(spec, model_root)
+    if spec.kind in {"qwen_base", "qwen_sft"}:
+        return QwenGenerationAdapter(spec, model_root)
     if spec.kind == "vision_jev_rlcd":
         return VisionJevAdapter(spec, model_root)
     raise ValueError(f"unsupported model kind: {spec.kind}")

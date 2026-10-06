@@ -59,7 +59,7 @@ class ModelSpec:
     @classmethod
     def from_dict(cls, value: dict[str, Any], *, root: Path) -> ModelSpec:
         kind = str(_required(value, "kind"))
-        if kind not in {"qwen_base", "vision_jev_rlcd"}:
+        if kind not in {"qwen_base", "qwen_sft", "vision_jev_rlcd"}:
             raise ValueError(f"unsupported model kind: {kind}")
 
         def optional_path(key: str) -> Path | None:
@@ -77,8 +77,10 @@ class ModelSpec:
             rlcd_config=optional_path("rlcd_config"),
             rlcd_checkpoint=optional_path("rlcd_checkpoint"),
         )
-        if spec.role not in {"baseline", "trained"}:
+        if spec.role not in {"baseline", "sft", "trained"}:
             raise ValueError(f"unsupported comparison role: {spec.role}")
+        if kind == "qwen_sft" and spec.sft_checkpoint is None:
+            raise ValueError(f"SFT model {spec.id} is missing checkpoint configuration")
         if kind == "vision_jev_rlcd" and any(
             path is None for path in (spec.sft_checkpoint, spec.rlcd_config, spec.rlcd_checkpoint)
         ):
@@ -145,9 +147,9 @@ def _validate_groups(models: tuple[ModelSpec, ...]) -> None:
     for group in groups:
         members = [model for model in models if model.parameter_group == group]
         roles = sorted(model.role for model in members)
-        if roles != ["baseline", "trained"]:
+        if roles not in (["baseline", "trained"], ["baseline", "sft", "trained"]):
             raise ValueError(
-                f"parameter group {group!r} must contain one baseline and one trained model"
+                f"parameter group {group!r} must contain baseline/trained and optional SFT models"
             )
 
 

@@ -21,6 +21,7 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader, Dataset
 from transformers import get_linear_schedule_with_warmup
 
+from vision_jev.eval.timing import summarize_latencies
 from vision_jev.model.heads import ChoiceHead, NoulHead, ScoreHead
 from vision_jev.model.losses import choice_set_loss, ranked_probability_score
 from vision_jev.model.qwen35 import DEFAULT_MODEL_CACHE, load_backbone, load_processor
@@ -484,6 +485,14 @@ def _source_threshold_reports(
     }
 
 
+def _attach_latency(report: dict[str, Any], records: list[dict[str, Any]]) -> None:
+    report["latency_ms"] = summarize_latencies(float(row["latency_ms"]) for row in records)
+    for task, metrics in report["by_task"].items():
+        metrics["latency_ms"] = summarize_latencies(
+            float(row["latency_ms"]) for row in records if row["task_type"] == task
+        )
+
+
 def evaluate_rlcd_checkpoint(
     config_path: Path,
     checkpoint: Path,
@@ -537,6 +546,12 @@ def evaluate_rlcd_checkpoint(
         manifest, role, seed=int(config.get("seed", 43)), maximum=maximum
     )
     extractor = FeatureExtractor(backbone, processor, config, device)
+    warmup = dataset[0]
+    warmup_task = str(warmup["task_type"])
+    with torch.no_grad(), torch.autocast(device_type="cuda", dtype=torch.bfloat16):
+        warmup_question, warmup_candidates, warmup_mask = extractor(warmup)
+        heads(warmup_task, warmup_question, warmup_candidates, warmup_mask)
+    torch.cuda.synchronize()
     totals = _new_totals(device)
     source_totals: dict[str, Tensor] = {}
     records: list[dict[str, Any]] = []
@@ -545,6 +560,8 @@ def evaluate_rlcd_checkpoint(
     torch.cuda.reset_peak_memory_stats()
     with output_path.open("w", encoding="utf-8") as output, torch.no_grad():
         for index, sample in enumerate(dataset, 1):
+            torch.cuda.synchronize()
+            sample_started = time.perf_counter()
             task = str(sample["task_type"])
             with torch.autocast(device_type="cuda", dtype=torch.bfloat16):
                 question, candidates, mask = extractor(sample)
@@ -573,6 +590,8 @@ def evaluate_rlcd_checkpoint(
                     if isinstance(raw_target, list)
                     else [str(raw_target)]
                 )
+            torch.cuda.synchronize()
+            latency_ms = (time.perf_counter() - sample_started) * 1000
             record = {
                 "sample_id": sample["sample_id"],
                 "root_id": sample["root_id"],
@@ -583,6 +602,7 @@ def evaluate_rlcd_checkpoint(
                 "probabilities": probability_values,
                 "confidence": metrics["confidence"],
                 "correct": bool(metrics["correct"]),
+                "latency_ms": latency_ms,
             }
             records.append(record)
             output.write(json.dumps(record, ensure_ascii=False) + "\n")
@@ -600,6 +620,15 @@ def evaluate_rlcd_checkpoint(
                     flush=True,
                 )
     report = _report(totals.cpu())
+    _attach_latency(report, records)
+    by_source = {}
+    for source, values in sorted(source_totals.items()):
+        source_report = _report(values.cpu())
+        _attach_latency(
+            source_report,
+            [row for row in records if str(row["source"]) == source],
+        )
+        by_source[source] = source_report
     report.update(
         {
             "role": role,
@@ -616,10 +645,9 @@ def evaluate_rlcd_checkpoint(
                 )
                 for source in sorted(source_totals)
             },
-            "by_source": {
-                source: _report(values.cpu())
-                for source, values in sorted(source_totals.items())
-            },
+            "by_source": by_source,
+            "latency_scope": "sample_preprocess_backbone_head_postprocess",
+            "latency_warmup_policy": "one_prediction_before_evaluation",
             "elapsed_seconds": time.monotonic() - started,
             "peak_gpu_memory_bytes": torch.cuda.max_memory_allocated(),
         }

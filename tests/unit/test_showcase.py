@@ -6,11 +6,13 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
+from showcase.baseline import evaluate_with_adapter, summarize_baseline
+from showcase.evaluation import build_static_test_report
 from showcase.models import Prediction, _normalize_generated
 from showcase.readme import END_MARKER, START_MARKER, publish_readme
 from showcase.render import _option_label, render_static_comparison, render_static_suite
 from showcase.schema import ModelSpec, ShowcaseConfig, StaticExample
-from showcase.static import is_correct, record_prediction, selected_sample
+from showcase.static import is_correct, record_prediction, selected_sample, sha256_file
 
 
 def _write_config(root: Path) -> tuple[Path, Path]:
@@ -51,6 +53,15 @@ def _write_config(root: Path) -> tuple[Path, Path]:
                         "model_config": "base.json",
                     },
                     {
+                        "id": "sft",
+                        "label": "SFT",
+                        "parameter_group": "1B",
+                        "role": "sft",
+                        "kind": "qwen_sft",
+                        "model_config": "base.json",
+                        "sft_checkpoint": "sft",
+                    },
+                    {
                         "id": "trained",
                         "label": "Trained",
                         "parameter_group": "1B",
@@ -73,7 +84,7 @@ def test_showcase_config_has_static_samples_and_paired_groups(tmp_path: Path) ->
     examples, models = _write_config(tmp_path)
     config = ShowcaseConfig.load(examples, models)
     assert [item.sample_id for item in config.examples] == ["sample-1"]
-    assert {item.role for item in config.models} == {"baseline", "trained"}
+    assert {item.role for item in config.models} == {"baseline", "sft", "trained"}
 
 
 def test_static_example_rejects_unknown_task() -> None:
@@ -165,6 +176,122 @@ def test_record_prediction_uses_repeatable_median_latency(tmp_path: Path) -> Non
     assert record["prediction"]["latency_ms"] == 20.0
 
 
+def test_baseline_evaluation_resumes_and_summarizes(tmp_path: Path) -> None:
+    class Adapter:
+        def __init__(self) -> None:
+            self.values = iter(("a", "a", False, "score_2"))
+            self.calls = 0
+
+        def predict(self, sample: dict[str, object]) -> Prediction:
+            self.calls += 1
+            value = next(self.values)
+            return Prediction(value, {}, 10.0, "{}")
+
+        def close(self) -> None:
+            pass
+
+    samples = [
+        {
+            "sample_id": "choice-1",
+            "root_id": "root-1",
+            "source": "source-a",
+            "task_type": "choice",
+            "target": ["a"],
+        },
+        {
+            "sample_id": "noul-1",
+            "root_id": "root-2",
+            "source": "source-a",
+            "task_type": "noul",
+            "target": False,
+        },
+        {
+            "sample_id": "score-1",
+            "root_id": "root-3",
+            "source": "source-b",
+            "task_type": "score",
+            "target": "score_1",
+        },
+    ]
+    model = ModelSpec("base", "Base", "1B", "baseline", "qwen_base", tmp_path)
+    output = tmp_path / "test.jsonl"
+    adapter = Adapter()
+    records = evaluate_with_adapter(model, samples, adapter, output, progress_every=2)
+    assert adapter.calls == 4  # one warmup plus one call per sample
+    assert len(records) == 3
+
+    resumed = evaluate_with_adapter(model, samples, adapter, output, progress_every=2)
+    assert resumed == records
+    assert adapter.calls == 4
+
+    manifest = tmp_path / "manifest.jsonl"
+    manifest.write_text("{}\n", encoding="utf-8")
+    summary = summarize_baseline(model, samples, records, manifest, output)
+    assert summary["questions"] == 3
+    assert summary["by_task"]["choice"]["accuracy"] == 1.0
+    assert summary["by_task"]["score"]["accuracy"] == 0.0
+    assert summary["protocol"] == "frozen_static_rlcd_test_original_qwen"
+    assert summary["latency_scope"] == "model_generate"
+    assert summary["latency_ms"]["samples"] == 3
+    assert summary["latency_ms"]["total_ms"] == 30.0
+
+
+def test_static_report_includes_verified_baseline(tmp_path: Path) -> None:
+    manifest = tmp_path / "manifest.jsonl"
+    samples = [
+        {
+            "sample_id": f"sample-{index}",
+            "source": "source-a",
+            "task_type": task,
+            "decision_role": "test",
+        }
+        for index, task in enumerate(("choice", "noul", "score"))
+    ]
+    manifest.write_text("".join(json.dumps(sample) + "\n" for sample in samples), encoding="utf-8")
+
+    trained = tmp_path / "trained"
+    trained.mkdir()
+    trained_predictions = [
+        {
+            "sample_id": sample["sample_id"],
+            "task_type": sample["task_type"],
+            "correct": True,
+        }
+        for sample in samples
+    ]
+    (trained / "test.jsonl").write_text(
+        "".join(json.dumps(record) + "\n" for record in trained_predictions),
+        encoding="utf-8",
+    )
+    (trained / "test.summary.json").write_text(json.dumps({"questions": 3}), encoding="utf-8")
+    (trained / "confidence-thresholds.json").write_text("{}", encoding="utf-8")
+
+    baseline = tmp_path / "baseline"
+    baseline.mkdir()
+    baseline_predictions = baseline / "test.jsonl"
+    baseline_predictions.write_text(
+        "".join(json.dumps(record) + "\n" for record in trained_predictions),
+        encoding="utf-8",
+    )
+    baseline_summary = {
+        "questions": 3,
+        "manifest_sha256": sha256_file(manifest),
+        "predictions_sha256": sha256_file(baseline_predictions),
+        "by_task": {
+            task: {"questions": 1, "accuracy": 1.0} for task in ("choice", "noul", "score")
+        },
+    }
+    (baseline / "test.summary.json").write_text(json.dumps(baseline_summary), encoding="utf-8")
+
+    report = build_static_test_report(
+        manifest,
+        {"1B": trained},
+        tmp_path / "report.json",
+        baseline_evaluations={"1B": baseline},
+    )
+    assert report["baselines"]["1B"]["summary"]["questions"] == 3
+
+
 def _prediction(
     path: Path, image: Path, *, role: str, label: str, latency_ms: float = 12.0
 ) -> None:
@@ -248,19 +375,97 @@ def test_publish_readme_replaces_only_marker_section(tmp_path: Path) -> None:
     report.write_text(
         json.dumps(
             {
-                "models": {
+                "baselines": {
                     "1B": {
                         "summary": {
                             "by_task": {
-                                task: {"accuracy": 0.8} for task in ("choice", "noul", "score")
+                                task: {"accuracy": 0.4, "valid_rate": 0.5}
+                                for task in ("choice", "noul", "score")
                             },
-                            "threshold_policy": {
-                                "choice": {"accuracy": 0.95, "coverage": 0.5},
-                                "noul": {"accuracy": 0.96, "coverage": 0.6},
+                            "by_source": {
+                                "source-a": {
+                                    "by_task": {"choice": {"questions": 1, "accuracy": 0.4}}
+                                }
+                            },
+                            "latency_ms": {
+                                "total_ms": 10.0,
+                                "mean_ms": 10.0,
+                                "p50_ms": 10.0,
+                                "p95_ms": 10.0,
+                                "p99_ms": 10.0,
+                                "min_ms": 10.0,
+                                "max_ms": 10.0,
                             },
                         }
                     }
-                }
+                },
+                "sft_models": {
+                    "1B": {
+                        "summary": {
+                            "by_task": {
+                                task: {"accuracy": 0.6, "valid_rate": 0.9}
+                                for task in ("choice", "noul", "score")
+                            },
+                            "by_source": {
+                                "source-a": {
+                                    "by_task": {"choice": {"questions": 1, "accuracy": 0.6}}
+                                }
+                            },
+                            "latency_ms": {
+                                "total_ms": 8.0,
+                                "mean_ms": 8.0,
+                                "p50_ms": 8.0,
+                                "p95_ms": 8.0,
+                                "p99_ms": 8.0,
+                                "min_ms": 8.0,
+                                "max_ms": 8.0,
+                            },
+                        }
+                    }
+                },
+                "models": {
+                    "1B": {
+                        "summary": {
+                            "questions": 3,
+                            "elapsed_seconds": 0.02,
+                            "high_confidence_errors_0_9": 1,
+                            "by_task": {
+                                "choice": {
+                                    "questions": 1,
+                                    "accuracy": 0.8,
+                                    "nll": 0.2,
+                                    "brier": 0.1,
+                                    "ece_15": 0.05,
+                                },
+                                "noul": {
+                                    "questions": 1,
+                                    "accuracy": 0.8,
+                                    "nll": 0.2,
+                                    "brier": 0.1,
+                                    "ece_15": 0.05,
+                                },
+                                "score": {
+                                    "questions": 1,
+                                    "accuracy": 0.8,
+                                    "nll": 0.2,
+                                    "brier": 0.1,
+                                    "ece_15": 0.05,
+                                    "rps": 0.03,
+                                    "mean_absolute_error": 0.2,
+                                },
+                            },
+                            "threshold_policy": {
+                                task: {
+                                    "threshold": 0.8,
+                                    "accuracy": 0.95,
+                                    "coverage": 0.5,
+                                }
+                                for task in ("choice", "noul", "score")
+                            },
+                        },
+                        "by_source": {"source-a": {"choice": {"questions": 1, "accuracy": 0.8}}},
+                    }
+                },
             }
         ),
         encoding="utf-8",
@@ -274,6 +479,7 @@ def test_publish_readme_replaces_only_marker_section(tmp_path: Path) -> None:
     assert updated.startswith("# Before")
     assert "## Static RLCD results" in updated
     assert "## Frozen test showcase" in updated
+    assert "Base (original)" in updated
     assert '<p align="center"><img src="' in updated
     assert 'width="900"' in updated
     assert "| 1B |" not in updated

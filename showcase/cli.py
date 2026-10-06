@@ -88,16 +88,47 @@ def render(args: argparse.Namespace) -> int:
     return 0
 
 
+def evaluate_baseline_command(args: argparse.Namespace) -> int:
+    from showcase.baseline import evaluate_baseline
+
+    config = _config(args)
+    model = next((item for item in config.models if item.id == args.model), None)
+    if model is None:
+        raise ValueError(f"unknown model: {args.model}")
+    report = evaluate_baseline(
+        model,
+        args.manifest,
+        args.output,
+        model_root=args.model_root,
+        maximum=args.maximum,
+        progress_every=args.progress_every,
+    )
+    print(json.dumps(report, indent=2))
+    return 0
+
+
 def build_report(args: argparse.Namespace) -> int:
     from showcase.evaluation import build_static_test_report
 
+    trained_evaluations = {}
+    for group, slug in (("0.8B", "qwen35-08b"), ("9B", "qwen35-9b")):
+        run = args.data_root / f"runs/{slug}-rlcd-main-72k"
+        timed = run / "evaluation-static-timed"
+        trained_evaluations[group] = (
+            timed if (timed / "test.summary.json").is_file() else run / "evaluation"
+        )
     report = build_static_test_report(
         args.manifest,
-        {
-            "0.8B": args.data_root / "runs/qwen35-08b-rlcd-main-72k/evaluation",
-            "9B": args.data_root / "runs/qwen35-9b-rlcd-main-72k/evaluation",
-        },
+        trained_evaluations,
         args.output,
+        baseline_evaluations={
+            "0.8B": args.data_root / "runs/qwen35-08b-base/evaluation-static-rlcd",
+            "9B": args.data_root / "runs/qwen35-9b-base/evaluation-static-rlcd",
+        },
+        sft_evaluations={
+            "0.8B": args.data_root / "runs/qwen35-08b-sft-main-117k/evaluation-static-rlcd",
+            "9B": args.data_root / "runs/qwen35-9b-sft-main-117k/evaluation-static-rlcd",
+        },
     )
     print(json.dumps(report, indent=2))
     return 0
@@ -148,7 +179,8 @@ def run_all(args: argparse.Namespace) -> int:
     models = [
         model
         for model in config.models
-        if not args.parameter_group or model.parameter_group in args.parameter_group
+        if model.role in {"baseline", "trained"}
+        and (not args.parameter_group or model.parameter_group in args.parameter_group)
     ]
     if not examples:
         raise ValueError("no examples matched the requested filters")
@@ -237,6 +269,17 @@ def parser() -> argparse.ArgumentParser:
     render_parser.add_argument("--output", type=Path, required=True)
     render_parser.add_argument("--frame-duration-ms", type=int, default=1100)
     render_parser.set_defaults(func=render)
+
+    baseline_parser = commands.add_parser(
+        "evaluate-baseline", help="evaluate original or SFT Qwen on frozen static test data"
+    )
+    baseline_parser.add_argument("--model", required=True)
+    baseline_parser.add_argument("--manifest", type=Path, default=shared_manifest)
+    baseline_parser.add_argument("--model-root", type=Path, default=Path("/data/vision-jev/models"))
+    baseline_parser.add_argument("--output", type=Path, required=True)
+    baseline_parser.add_argument("--maximum", type=int)
+    baseline_parser.add_argument("--progress-every", type=int, default=100)
+    baseline_parser.set_defaults(func=evaluate_baseline_command)
 
     report_parser = commands.add_parser("build-test-report")
     report_parser.add_argument("--manifest", type=Path, default=shared_manifest)

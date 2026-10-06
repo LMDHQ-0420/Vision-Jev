@@ -10,6 +10,15 @@
       "model_config": "configs/model/qwen35_08b.json"
     },
     {
+      "id": "qwen35-08b-sft",
+      "label": "Qwen3.5-0.8B + SFT",
+      "parameter_group": "0.8B",
+      "role": "sft",
+      "kind": "qwen_sft",
+      "model_config": "configs/model/qwen35_08b.json",
+      "sft_checkpoint": "${DATA_ROOT}/runs/qwen35-08b-sft-main-117k/checkpoint-last"
+    },
+    {
       "id": "vision-jev-08b",
       "label": "Vision-Jev-0.8B",
       "parameter_group": "0.8B",
@@ -27,6 +36,15 @@
       "role": "baseline",
       "kind": "qwen_base",
       "model_config": "configs/model/qwen35_9b.json"
+    },
+    {
+      "id": "qwen35-9b-sft",
+      "label": "Qwen3.5-9B + SFT",
+      "parameter_group": "9B",
+      "role": "sft",
+      "kind": "qwen_sft",
+      "model_config": "configs/model/qwen35_9b.json",
+      "sft_checkpoint": "${DATA_ROOT}/runs/qwen35-9b-sft-main-117k/checkpoint-last"
     },
     {
       "id": "vision-jev-9b",

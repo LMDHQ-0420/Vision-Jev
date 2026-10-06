@@ -47,8 +47,36 @@ python -m showcase.cli validate
 Build a source-aware report from the immutable completed test artifacts:
 
 ```bash
+CUDA_VISIBLE_DEVICES=0 python -m showcase.cli evaluate-baseline \
+  --model qwen35-08b-base \
+  --output /data/vision-jev/runs/qwen35-08b-base/evaluation-static-rlcd/test.jsonl
+CUDA_VISIBLE_DEVICES=1 python -m showcase.cli evaluate-baseline \
+  --model qwen35-9b-base \
+  --output /data/vision-jev/runs/qwen35-9b-base/evaluation-static-rlcd/test.jsonl
+CUDA_VISIBLE_DEVICES=0 python -m showcase.cli evaluate-baseline \
+  --model qwen35-08b-sft \
+  --output /data/vision-jev/runs/qwen35-08b-sft-main-117k/evaluation-static-rlcd/test.jsonl
+CUDA_VISIBLE_DEVICES=1 python -m showcase.cli evaluate-baseline \
+  --model qwen35-9b-sft \
+  --output /data/vision-jev/runs/qwen35-9b-sft-main-117k/evaluation-static-rlcd/test.jsonl
 python -m showcase.cli build-test-report
 ```
+
+The generation evaluator loads either original Qwen without project SFT/RLCD or the
+completed SFT adapter, then performs greedy generation only. It appends one auditable
+record per question, resumes from a partial JSONL file, and publishes no calibrated
+threshold metrics because these stages have no decision-head probability output. Every
+record retains its model-generation latency. Summaries report total, mean, P50, P95,
+P99, minimum, and maximum latency overall and within each task and source.
+
+The original frozen Vision-Jev test artifacts retain total elapsed time but predate
+per-question timing. To collect comparable distributions without replacing those
+artifacts, run test-only inference into `evaluation-static-timed/` with the already
+frozen temperatures and thresholds. Each output record stores the synchronized time
+for sample preprocessing, backbone inference, the existing decision head, and
+postprocessing. The summary repeats the full latency distribution overall, by task,
+and by source. `build-test-report` automatically uses a completed timed directory and
+otherwise falls back to the original evaluation directory.
 
 Run every static comparison sequentially. Only one model is resident on the GPU,
 complete prediction records are skipped when resuming, and the final output is
