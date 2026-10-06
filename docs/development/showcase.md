@@ -4,6 +4,12 @@ This directory produces README animations from recorded model decisions. It keep
 showcase separate from training while reusing the exact Vision-Jev prompt, backbone,
 LoRA adapter, calibrated decision heads, and environment packages.
 
+Actions are ordinary dynamic candidates scored by the existing `ChoiceHead`; the
+showcase does not define or train a separate action head. It is an inference-only
+consumer of released checkpoints and must never launch training as a prerequisite for
+an animation. Closed-loop failures remain valid evaluation evidence, not a reason to
+create an unreviewed model branch.
+
 ## Comparison contract
 
 Each example is evaluated twice per parameter group:
