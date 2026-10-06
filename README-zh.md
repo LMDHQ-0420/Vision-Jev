@@ -351,12 +351,6 @@ tests/              单元测试与集成测试
 
 原始数据、checkpoint 和大型运行产物不会提交 Git。
 
-## 文档与许可
-
-建议从[文档首页](docs/index.md)、[数据流程](docs/data/pipeline.md)、[SFT 教程](docs/training/sft.md)、[评测协议](docs/evaluation/protocol.md)和[发布清单](docs/release/checklist.md)开始。
-
-Vision-Jev 源代码采用 [Apache License 2.0](LICENSE)。数据资产和衍生发布可能受到上游许可的额外限制，重新分发或商用前请检查[来源账本](docs/data/sources.md)。首个模型发布时会补充正式引用信息；在此之前，请引用仓库地址和准确 Git commit。
-
 ## 训练数据
 
 SFT 数据包含 **117,000 道公开来源完整问题**，本项目新增人工标注为 0。
@@ -373,3 +367,9 @@ SFT 数据包含 **117,000 道公开来源完整问题**，本项目新增人工
 - [数据混合方案](docs/data/mixtures.md)
 - [机器可读来源](configs/data/sources.json)
 - [训练配方](configs/data/sft_117k.json)
+
+## 文档与许可
+
+建议从[文档首页](docs/index.md)、[数据流程](docs/data/pipeline.md)、[SFT 教程](docs/training/sft.md)、[评测协议](docs/evaluation/protocol.md)和[发布清单](docs/release/checklist.md)开始。
+
+Vision-Jev 源代码采用 [Apache License 2.0](LICENSE)。数据资产和衍生发布可能受到上游许可的额外限制，重新分发或商用前请检查[来源账本](docs/data/sources.md)。首个模型发布时会补充正式引用信息；在此之前，请引用仓库地址和准确 Git commit。

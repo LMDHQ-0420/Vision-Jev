@@ -352,14 +352,6 @@ tests/              Unit and integration tests
 
 Raw data, checkpoints, and large run artifacts are excluded from Git.
 
-## Documentation and license
-
-Start with the [documentation index](docs/index.md), [data pipeline](docs/data/pipeline.md), [SFT guide](docs/training/sft.md), [evaluation protocol](docs/evaluation/protocol.md), and [release checklist](docs/release/checklist.md).
-
-Vision-Jev source code is released under the [Apache License 2.0](LICENSE). Dataset assets and derived releases may carry additional upstream restrictions; consult the [source ledger](docs/data/sources.md) before redistribution or commercial use.
-
-Formal citation metadata will be added with the first model release. Until then, cite the repository URL and exact Git commit used.
-
 ## Training data
 
 The SFT mixture contains **117,000 complete public-data questions** and introduces no project-specific human annotation.
@@ -376,3 +368,11 @@ The mixture covers GUI actions, region grounding, compositional reasoning, VQA, 
 - [Mixture specification](docs/data/mixtures.md)
 - [Machine-readable sources](configs/data/sources.json)
 - [Training recipe](configs/data/sft_117k.json)
+
+## Documentation and license
+
+Start with the [documentation index](docs/index.md), [data pipeline](docs/data/pipeline.md), [SFT guide](docs/training/sft.md), [evaluation protocol](docs/evaluation/protocol.md), and [release checklist](docs/release/checklist.md).
+
+Vision-Jev source code is released under the [Apache License 2.0](LICENSE). Dataset assets and derived releases may carry additional upstream restrictions; consult the [source ledger](docs/data/sources.md) before redistribution or commercial use.
+
+Formal citation metadata will be added with the first model release. Until then, cite the repository URL and exact Git commit used.
