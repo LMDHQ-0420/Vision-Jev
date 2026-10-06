@@ -1,4 +1,4 @@
-"""Lazy GPU adapters for the baseline and Vision-Jev decision model."""
+"""Lazy GPU adapters for static baseline and Vision-Jev comparisons."""
 
 from __future__ import annotations
 
@@ -10,19 +10,32 @@ from typing import Any, Protocol
 
 from showcase.schema import ModelSpec
 
+PredictionValue = bool | int | str | None
+
 
 @dataclass(frozen=True)
-class Decision:
-    action: str | None
+class Prediction:
+    value: PredictionValue
     probabilities: dict[str, float]
     latency_ms: float
     raw_output: str | None = None
 
 
 class ModelAdapter(Protocol):
-    def decide(self, sample: dict[str, Any]) -> Decision: ...
+    def predict(self, sample: dict[str, Any]) -> Prediction: ...
 
     def close(self) -> None: ...
+
+
+def _normalize_generated(task: str, value: Any, sample: dict[str, Any]) -> PredictionValue:
+    if task == "noul":
+        return value if isinstance(value, bool) else None
+    if task == "score":
+        if isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= 5:
+            return f"score_{value}"
+        return None
+    options = {str(option["id"]) for option in sample["options"]}
+    return value if isinstance(value, str) and value in options else None
 
 
 class QwenBaseAdapter:
@@ -39,7 +52,7 @@ class QwenBaseAdapter:
             spec.model_config, model_root=model_root, dtype=torch.bfloat16, use_lora=False
         ).to("cuda").eval()
 
-    def decide(self, sample: dict[str, Any]) -> Decision:
+    def predict(self, sample: dict[str, Any]) -> Prediction:
         from vision_jev.train.sft import NativeQwenCollator, conversation
 
         budget = NativeQwenCollator(self.processor).visual_budget([sample])
@@ -71,16 +84,15 @@ class QwenBaseAdapter:
         raw = self.processor.decode(
             generated[0, input_length:], skip_special_tokens=True
         ).strip()
-        options = {str(option["id"]) for option in sample["options"]}
-        action: str | None = None
+        task = str(sample["task_type"])
+        value: PredictionValue = None
         try:
             parsed = json.loads(raw)
-            candidate = parsed.get("choice") if isinstance(parsed, dict) else None
-            if isinstance(candidate, str) and candidate in options:
-                action = candidate
+            candidate = parsed.get(task) if isinstance(parsed, dict) else None
+            value = _normalize_generated(task, candidate, sample)
         except json.JSONDecodeError:
             pass
-        return Decision(action, {}, latency_ms, raw)
+        return Prediction(value, {}, latency_ms, raw)
 
     def close(self) -> None:
         del self.model
@@ -122,25 +134,32 @@ class VisionJevAdapter:
         self.extractor = FeatureExtractor(self.model, processor, config, torch.device("cuda"))
         self.torch = torch
 
-    def decide(self, sample: dict[str, Any]) -> Decision:
+    def predict(self, sample: dict[str, Any]) -> Prediction:
         from vision_jev.train.rlcd import calibrated_probabilities
 
+        task = str(sample["task_type"])
         self.torch.cuda.synchronize()
         started = time.perf_counter()
         with self.torch.no_grad(), self.torch.autocast(
             device_type="cuda", dtype=self.torch.bfloat16
         ):
             question, candidates, mask = self.extractor(sample)
-            logits, _ = self.heads("choice", question, candidates, mask)
+            logits, _ = self.heads(task, question, candidates, mask)
         values = calibrated_probabilities(
-            "choice", logits, float(self.temperatures["choice"])
-        )[0].float().cpu().tolist()
+            task, logits, float(self.temperatures[task])
+        ).float().cpu()
         self.torch.cuda.synchronize()
         latency_ms = (time.perf_counter() - started) * 1000
-        options = [str(option["id"]) for option in sample["options"]]
-        probabilities = dict(zip(options, values, strict=True))
-        action = max(probabilities, key=probabilities.__getitem__)
-        return Decision(action, probabilities, latency_ms)
+        if task == "noul":
+            positive = float(values.item())
+            probabilities = {"false": 1.0 - positive, "true": positive}
+            value: PredictionValue = positive >= 0.5
+        else:
+            option_ids = [str(option["id"]) for option in sample["options"]]
+            probability_values = values[0].tolist()
+            probabilities = dict(zip(option_ids, probability_values, strict=True))
+            value = max(probabilities, key=probabilities.__getitem__)
+        return Prediction(value, probabilities, latency_ms)
 
     def close(self) -> None:
         del self.extractor, self.heads, self.model

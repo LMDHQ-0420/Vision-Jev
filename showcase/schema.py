@@ -1,4 +1,4 @@
-"""Configuration and trajectory contracts for showcase generation."""
+"""Validated configuration and records for static RLCD showcases."""
 
 from __future__ import annotations
 
@@ -16,44 +16,31 @@ def _required(value: dict[str, Any], key: str) -> Any:
 
 
 def _expand_path(value: str, *, root: Path) -> Path:
-    expanded = os.path.expandvars(os.path.expanduser(value))
-    path = Path(expanded)
-    return path if path.is_absolute() else root / path
+    expanded = Path(os.path.expandvars(value)).expanduser()
+    return expanded if expanded.is_absolute() else root / expanded
 
 
 @dataclass(frozen=True)
-class Example:
+class StaticExample:
     id: str
     title: str
     description: str
-    environment_id: str
-    seed: int
-    max_steps: int
-    actions: tuple[str, ...]
+    source: str
+    task_type: str
+    sample_id: str
 
     @classmethod
-    def from_dict(cls, value: dict[str, Any]) -> Example:
-        environment = dict(_required(value, "environment"))
-        family = str(_required(environment, "family"))
-        if family != "minigrid":
-            raise ValueError(f"unsupported showcase environment family: {family}")
-        actions = tuple(str(action) for action in _required(environment, "actions"))
-        if not actions or len(actions) != len(set(actions)):
-            raise ValueError(f"example {value.get('id')} needs unique actions")
-        seed = _required(environment, "seed")
-        if isinstance(seed, bool) or not isinstance(seed, int):
-            raise ValueError(f"example {value.get('id')} requires exactly one integer seed")
-        max_steps = int(_required(environment, "max_steps"))
-        if max_steps < 1:
-            raise ValueError("max_steps must be positive")
+    def from_dict(cls, value: dict[str, Any]) -> StaticExample:
+        task_type = str(_required(value, "task_type"))
+        if task_type not in {"choice", "noul", "score"}:
+            raise ValueError(f"unsupported showcase task: {task_type}")
         return cls(
             id=str(_required(value, "id")),
             title=str(_required(value, "title")),
             description=str(_required(value, "description")),
-            environment_id=str(_required(environment, "environment_id")),
-            seed=seed,
-            max_steps=max_steps,
-            actions=actions,
+            source=str(_required(value, "source")),
+            task_type=task_type,
+            sample_id=str(_required(value, "sample_id")),
         )
 
 
@@ -103,25 +90,39 @@ class ModelSpec:
 @dataclass(frozen=True)
 class ShowcaseConfig:
     frame_duration_ms: int
-    examples: tuple[Example, ...]
+    manifest_sha256: str
+    selection_rule: str
+    examples: tuple[StaticExample, ...]
     models: tuple[ModelSpec, ...]
 
     @classmethod
     def load(cls, examples_path: Path, models_path: Path) -> ShowcaseConfig:
         example_data = json.loads(examples_path.read_text(encoding="utf-8"))
         model_data = json.loads(models_path.read_text(encoding="utf-8"))
-        if example_data.get("schema_version") != 1 or model_data.get("schema_version") != 1:
-            raise ValueError("showcase configs require schema_version=1")
-        examples = tuple(Example.from_dict(item) for item in example_data["examples"])
+        if example_data.get("schema_version") != 2:
+            raise ValueError("static showcase examples require schema_version=2")
+        if model_data.get("schema_version") != 1:
+            raise ValueError("showcase models require schema_version=1")
+        examples = tuple(StaticExample.from_dict(item) for item in example_data["examples"])
         root = models_path.resolve().parents[2]
         models = tuple(ModelSpec.from_dict(item, root=root) for item in model_data["models"])
         _validate_unique("example", [item.id for item in examples])
+        _validate_unique("sample", [item.sample_id for item in examples])
         _validate_unique("model", [item.id for item in models])
         _validate_groups(models)
-        frame_duration_ms = int(example_data.get("frame_duration_ms", 700))
+        frame_duration_ms = int(example_data.get("frame_duration_ms", 1100))
         if frame_duration_ms < 100:
             raise ValueError("frame_duration_ms must be at least 100")
-        return cls(frame_duration_ms, examples, models)
+        digest = str(_required(example_data, "manifest_sha256"))
+        if len(digest) != 64:
+            raise ValueError("manifest_sha256 must be a SHA-256 digest")
+        return cls(
+            frame_duration_ms=frame_duration_ms,
+            manifest_sha256=digest,
+            selection_rule=str(_required(example_data, "selection_rule")),
+            examples=examples,
+            models=models,
+        )
 
 
 def _validate_unique(label: str, values: list[str]) -> None:

@@ -1,14 +1,9 @@
-# Reproducible demo pipeline
+# Reproducible static showcase
 
-This directory produces README animations from recorded model decisions. It keeps the
-showcase separate from training while reusing the exact Vision-Jev prompt, backbone,
-LoRA adapter, calibrated decision heads, and environment packages.
-
-Actions are ordinary dynamic candidates scored by the existing `ChoiceHead`; the
-showcase does not define or train a separate action head. It is an inference-only
-consumer of released checkpoints and must never launch training as a prerequisite for
-an animation. Closed-loop failures remain valid evaluation evidence, not a reason to
-create an unreviewed model branch.
+The README animations compare original Qwen3.5 with Vision-Jev on samples from the
+frozen static RLCD test split. The showcase is inference-only: it reuses the released
+SFT adapters, `ChoiceHead`, `NoulHead`, `ScoreHead`, and temperatures without creating
+or modifying a checkpoint.
 
 ## Comparison contract
 
@@ -19,83 +14,70 @@ Each example is evaluated twice per parameter group:
 | 0.8B | Original Qwen3.5-0.8B | Vision-Jev-0.8B |
 | 9B | Original Qwen3.5-9B | Vision-Jev-9B |
 
-Each visual example freezes exactly one unseen seed. Both panels receive the same
-rendered state, mission, candidates, environment seed,
-maximum step count, and greedy decoding policy. Baseline parse failures are shown as
-failures; the recorder never substitutes an oracle action. Every trajectory stores frame
-hashes, actions, calibrated probabilities when available, per-step latency, and outcome.
+Both panels receive the identical image, state text, question, and dynamic candidate
+set. Original Qwen uses greedy structured generation. Vision-Jev scores the candidates
+with its existing calibrated task head. Invalid baseline JSON remains an invalid result.
 
-The initial suite covers FourRooms, DoorKey, LavaCrossing, Dynamic Obstacles, and BabyAI.
-Procgen Maze and Boxoban should use the same trajectory contract through isolated
-environment adapters, because Procgen has a pinned Python 3.10 runtime and Boxoban uses
-the repository's custom level parser.
+The seven categories are declared in `showcase/configs/examples.json`. Within each
+category, the published sample is selected from the frozen test role by this auditable
+rule:
 
-Before recording any single-seed animation, evaluate both released static RLCD checkpoints
-zero-shot on every frozen interactive `threshold`, `audit`, and `test` seed:
+1. Both released Vision-Jev checkpoints must be correct.
+2. Both predictions must pass their previously frozen per-task confidence threshold.
+3. The minimum `SHA-256(sample_id)` among eligible samples is selected.
+4. Original Qwen predictions are never used during selection.
 
-```bash
-scripts/evaluate_interactive_zero_shot.sh all /data/vision-jev
-```
-
-Outputs live under each static run's `evaluation-interactive-zero-shot/` directory. This
-evaluation reuses the existing `ChoiceHead`, SFT adapter, static RLCD temperatures, and
-16k role manifest; it does not create training views or write model weights.
+This deliberate accepted-set showcase is paired with the complete 12,000-question test
+table in the README. The animations demonstrate calibrated strengths; the full test
+table remains the measure of overall quality.
 
 ## Run
 
-Install both inference and interactive-environment dependencies in the same environment,
-then set the external data root:
+Set the external data root and validate every configured sample against the pinned
+manifest hash:
 
 ```bash
-pip install -e '.[train,rl]'
 export DATA_ROOT=/data/vision-jev
 python -m showcase.cli validate
 ```
 
-Run the complete suite sequentially. Only one model is resident on the GPU at a time;
-existing complete trajectories are skipped when the command is resumed:
+Build a source-aware report from the immutable completed test artifacts:
+
+```bash
+python -m showcase.cli build-test-report
+```
+
+Run every static comparison sequentially. Only one model is resident on the GPU, and
+complete prediction records are skipped when resuming:
 
 ```bash
 python -m showcase.cli run-all
 ```
 
-Record one deterministic episode:
+Record one model prediction or render one completed pair:
 
 ```bash
-python -m showcase.cli record \
-  --example fourrooms-navigation \
-  --model qwen35-08b-base
-```
-
-After recording both models in a parameter group, render the comparison:
-
-```bash
+python -m showcase.cli record --example general-vqa --model qwen35-08b-base
 python -m showcase.cli render \
-  --baseline showcase/output/fourrooms-navigation/qwen35-08b-base/trajectory.json \
-  --trained showcase/output/fourrooms-navigation/vision-jev-08b/trajectory.json \
-  --output asset/demos/fourrooms-navigation/0.8b.gif
+  --baseline showcase/output/general-vqa/qwen35-08b-base/prediction.json \
+  --trained showcase/output/general-vqa/vision-jev-08b/prediction.json \
+  --output asset/demos/general-vqa/0.8b.gif
 ```
 
-Only reviewed GIFs and their final metric summaries belong in `asset/demos/`. Raw frames
-and trajectories remain under the ignored `showcase/output/` directory. The README
-fragment generator refuses to create markup until every configured GIF exists:
+Raw prediction records and generated reports remain under ignored `showcase/output/`.
+Reviewed GIFs belong in `asset/demos/`. Publish the generated section only after all
+configured assets and the test report exist:
 
 ```bash
-python -m showcase.cli readme --output showcase/output/README-demos.md
-```
-
-After reviewing the generated fragment, update the marker-delimited section in the main
-README without manual copying:
-
-```bash
+python -m showcase.cli readme
 python -m showcase.cli publish-readme
 ```
 
-## Selection rules
+## Integrity rules
 
-- Reserve exactly one unseen seed per visual example before running any model.
-- Use multi-seed evaluation only in the formal test protocol, not inside a README animation.
-- Keep failed runs; do not search seeds independently for Vision-Jev and Qwen.
-- Publish all configured examples or disclose the deterministic selection rule.
-- Report success, decisions, cumulative model latency, and invalid output failures.
-- Preserve the trajectory JSON and exact model/config revisions for release evidence.
+- Never train, fine-tune, or create a showcase-specific decision head.
+- Never change the sample or candidates between baseline and Vision-Jev.
+- Keep the frozen manifest hash and exact sample IDs in version control.
+- Preserve valid and invalid original-Qwen generations in the prediction records.
+- Do not describe selected accepted-set examples as aggregate evaluation.
+- Regenerate the full test report from immutable artifacts before publishing metrics.
