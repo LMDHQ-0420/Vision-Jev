@@ -65,30 +65,37 @@ Original Qwen, the completed SFT-only checkpoint, and Vision-Jev with its static
 
 ### 0.8B summary
 
-| Model | Choice | Noul | Score |
+| Training stage | Choice | Noul | Score |
 | --- | ---: | ---: | ---: |
 | Qwen3.5-0.8B (original) | 24.5% | 39.5% | 2.9% |
-| Qwen3.5-0.8B + SFT | 90.4% | 81.4% | 54.7% |
-| Vision-Jev-0.8B | 80.8% | 81.2% | 55.5% |
+| Qwen3.5-0.8B + SFT | **90.4%** | **81.4%** | 54.7% |
+| **Vision-Jev-0.8B** | 80.8% | 81.2% | **55.5%** |
 
 ### 9B summary
 
-| Model | Choice | Noul | Score |
+| Training stage | Choice | Noul | Score |
 | --- | ---: | ---: | ---: |
 | Qwen3.5-9B (original) | 87.1% | 80.4% | 32.9% |
-| Qwen3.5-9B + SFT | 95.4% | 89.3% | 60.5% |
-| Vision-Jev-9B | 74.4% | 88.9% | 62.1% |
+| Qwen3.5-9B + SFT | **95.4%** | **89.3%** | 60.5% |
+| **Vision-Jev-9B** | 74.4% | 88.9% | **62.1%** |
 
 ### Accepted-set calibration
 
-| Model | Task | Threshold | Coverage | Accepted accuracy |
-| --- | --- | ---: | ---: | ---: |
-| Vision-Jev-0.8B | Choice | 0.762 | 65.9% | 93.9% |
-| Vision-Jev-0.8B | Noul | 0.797 | 53.2% | 94.7% |
-| Vision-Jev-0.8B | Score | 0.886 | 9.2% | 97.3% |
-| Vision-Jev-9B | Choice | 0.665 | 60.7% | 94.8% |
-| Vision-Jev-9B | Noul | 0.697 | 84.9% | 94.7% |
-| Vision-Jev-9B | Score | 0.915 | 14.3% | 96.5% |
+#### Vision-Jev-0.8B
+
+| Task | Threshold | Coverage | **Accepted accuracy** |
+| --- | ---: | ---: | ---: |
+| Choice | 0.762 | 65.9% | **93.9%** |
+| Noul | 0.797 | 53.2% | **94.7%** |
+| Score | 0.886 | 9.2% | **97.3%** |
+
+#### Vision-Jev-9B
+
+| Task | Threshold | Coverage | **Accepted accuracy** |
+| --- | ---: | ---: | ---: |
+| Choice | 0.665 | 60.7% | **94.8%** |
+| Noul | 0.697 | 84.9% | **94.7%** |
+| Score | 0.915 | 14.3% | **96.5%** |
 
 #### High-confidence errors
 
@@ -103,45 +110,85 @@ Counts cover every incorrect test prediction with confidence at least 0.9.
 
 The original-Qwen and SFT JSONL files retain generation latency for every question. The independent Vision-Jev timing runs retain synchronized full decision-path latency. The table summarizes every per-question record and labels the two scopes separately.
 
-| Model | Scope | Total (s) | Mean (ms) | P50 | P95 | P99 | Min | Max |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Qwen3.5-0.8B | Per-question generation | 3718.1 | 309.8 | 241.9 | 542.3 | 550.7 | 171.3 | 671.0 |
-| Qwen3.5-0.8B + SFT | Per-question generation | 3802.8 | 316.9 | 286.6 | 444.9 | 501.7 | 248.0 | 569.6 |
-| Vision-Jev-0.8B | Full decision loop | 1051.6 | 87.6 | 83.2 | 147.3 | 193.8 | 41.7 | 292.2 |
-| Qwen3.5-9B | Per-question generation | 4372.3 | 364.4 | 326.9 | 507.7 | 530.2 | 263.7 | 804.1 |
-| Qwen3.5-9B + SFT | Per-question generation | 5259.5 | 438.3 | 392.0 | 609.1 | 691.4 | 344.2 | 754.0 |
-| Vision-Jev-9B | Full decision loop | 1384.5 | 115.4 | 105.6 | 197.3 | 273.0 | 55.1 | 318.5 |
+#### 0.8B overall
 
-<details>
-<summary><strong>Timing by task</strong></summary>
+| Metric | Original Qwen | SFT | **Vision-Jev** |
+| --- | ---: | ---: | ---: |
+| Measurement scope | Generation | Generation | Full decision loop |
+| Total (s) | 3718.1 | 3802.8 | **1051.6** |
+| Mean (ms) | 309.8 | 316.9 | **87.6** |
+| P50 (ms) | 241.9 | 286.6 | **83.2** |
+| P95 (ms) | 542.3 | 444.9 | **147.3** |
+| P99 (ms) | 550.7 | 501.7 | **193.8** |
+| Min (ms) | 171.3 | 248.0 | **41.7** |
+| Max (ms) | 671.0 | 569.6 | **292.2** |
 
-| Model | Task | Samples | Mean (ms) | P50 | P95 | P99 | Min | Max |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Qwen3.5-0.8B | Choice | 8,400 | 298.2 | 241.4 | 535.7 | 542.2 | 190.0 | 652.2 |
-| Qwen3.5-0.8B | Noul | 2,400 | 270.5 | 218.9 | 505.7 | 528.8 | 210.0 | 636.3 |
-| Qwen3.5-0.8B | Score | 1,200 | 469.8 | 541.3 | 548.5 | 656.2 | 171.3 | 671.0 |
-| Qwen3.5-0.8B + SFT | Choice | 8,400 | 341.4 | 290.7 | 447.1 | 508.1 | 267.4 | 569.6 |
-| Qwen3.5-0.8B + SFT | Noul | 2,400 | 262.2 | 258.9 | 290.8 | 317.8 | 252.4 | 565.8 |
-| Qwen3.5-0.8B + SFT | Score | 1,200 | 255.2 | 251.7 | 301.8 | 305.6 | 248.0 | 308.8 |
-| Vision-Jev-0.8B | Choice | 8,400 | 88.5 | 84.1 | 167.6 | 199.0 | 41.7 | 250.2 |
-| Vision-Jev-0.8B | Noul | 2,400 | 72.0 | 73.7 | 78.9 | 83.0 | 52.1 | 292.2 |
-| Vision-Jev-0.8B | Score | 1,200 | 112.9 | 113.5 | 116.8 | 119.2 | 90.7 | 138.9 |
-| Qwen3.5-9B | Choice | 8,400 | 390.9 | 330.3 | 510.5 | 563.5 | 263.7 | 804.1 |
-| Qwen3.5-9B | Noul | 2,400 | 295.9 | 293.3 | 302.7 | 357.7 | 285.9 | 365.7 |
-| Qwen3.5-9B | Score | 1,200 | 315.7 | 314.0 | 316.9 | 359.1 | 311.5 | 363.0 |
-| Qwen3.5-9B + SFT | Choice | 8,400 | 471.3 | 396.5 | 612.6 | 696.3 | 362.9 | 754.0 |
-| Qwen3.5-9B + SFT | Noul | 2,400 | 357.9 | 351.9 | 424.5 | 431.1 | 344.2 | 624.3 |
-| Qwen3.5-9B + SFT | Score | 1,200 | 368.3 | 363.5 | 420.8 | 424.9 | 360.3 | 432.0 |
-| Vision-Jev-9B | Choice | 8,400 | 116.0 | 110.7 | 227.3 | 276.7 | 55.1 | 318.5 |
-| Vision-Jev-9B | Noul | 2,400 | 94.1 | 96.0 | 111.8 | 122.6 | 72.7 | 133.2 |
-| Vision-Jev-9B | Score | 1,200 | 153.9 | 158.0 | 180.6 | 185.9 | 133.2 | 192.4 |
+#### 9B overall
 
-</details>
+| Metric | Original Qwen | SFT | **Vision-Jev** |
+| --- | ---: | ---: | ---: |
+| Measurement scope | Generation | Generation | Full decision loop |
+| Total (s) | 4372.3 | 5259.5 | **1384.5** |
+| Mean (ms) | 364.4 | 438.3 | **115.4** |
+| P50 (ms) | 326.9 | 392.0 | **105.6** |
+| P95 (ms) | 507.7 | 609.1 | **197.3** |
+| P99 (ms) | 530.2 | 691.4 | **273.0** |
+| Min (ms) | 263.7 | 344.2 | **55.1** |
+| Max (ms) | 804.1 | 754.0 | **318.5** |
 
-<details>
-<summary><strong>Calibration details</strong></summary>
+### Timing by task
 
-### Structured-output validity
+All latency values below are milliseconds. Mean latency is emphasized for quick comparison; the full distribution remains visible.
+
+#### 0.8B
+
+| Task | Samples | Metric | Original Qwen | SFT | **Vision-Jev** |
+| --- | ---: | --- | ---: | ---: | ---: |
+| Choice | 8,400 | **Mean** | 298.2 | 341.4 | **88.5** |
+| Choice | 8,400 | P50 | 241.4 | 290.7 | 84.1 |
+| Choice | 8,400 | P95 | 535.7 | 447.1 | 167.6 |
+| Choice | 8,400 | P99 | 542.2 | 508.1 | 199.0 |
+| Choice | 8,400 | Min | 190.0 | 267.4 | 41.7 |
+| Choice | 8,400 | Max | 652.2 | 569.6 | 250.2 |
+| Noul | 2,400 | **Mean** | 270.5 | 262.2 | **72.0** |
+| Noul | 2,400 | P50 | 218.9 | 258.9 | 73.7 |
+| Noul | 2,400 | P95 | 505.7 | 290.8 | 78.9 |
+| Noul | 2,400 | P99 | 528.8 | 317.8 | 83.0 |
+| Noul | 2,400 | Min | 210.0 | 252.4 | 52.1 |
+| Noul | 2,400 | Max | 636.3 | 565.8 | 292.2 |
+| Score | 1,200 | **Mean** | 469.8 | 255.2 | **112.9** |
+| Score | 1,200 | P50 | 541.3 | 251.7 | 113.5 |
+| Score | 1,200 | P95 | 548.5 | 301.8 | 116.8 |
+| Score | 1,200 | P99 | 656.2 | 305.6 | 119.2 |
+| Score | 1,200 | Min | 171.3 | 248.0 | 90.7 |
+| Score | 1,200 | Max | 671.0 | 308.8 | 138.9 |
+
+#### 9B
+
+| Task | Samples | Metric | Original Qwen | SFT | **Vision-Jev** |
+| --- | ---: | --- | ---: | ---: | ---: |
+| Choice | 8,400 | **Mean** | 390.9 | 471.3 | **116.0** |
+| Choice | 8,400 | P50 | 330.3 | 396.5 | 110.7 |
+| Choice | 8,400 | P95 | 510.5 | 612.6 | 227.3 |
+| Choice | 8,400 | P99 | 563.5 | 696.3 | 276.7 |
+| Choice | 8,400 | Min | 263.7 | 362.9 | 55.1 |
+| Choice | 8,400 | Max | 804.1 | 754.0 | 318.5 |
+| Noul | 2,400 | **Mean** | 295.9 | 357.9 | **94.1** |
+| Noul | 2,400 | P50 | 293.3 | 351.9 | 96.0 |
+| Noul | 2,400 | P95 | 302.7 | 424.5 | 111.8 |
+| Noul | 2,400 | P99 | 357.7 | 431.1 | 122.6 |
+| Noul | 2,400 | Min | 285.9 | 344.2 | 72.7 |
+| Noul | 2,400 | Max | 365.7 | 624.3 | 133.2 |
+| Score | 1,200 | **Mean** | 315.7 | 368.3 | **153.9** |
+| Score | 1,200 | P50 | 314.0 | 363.5 | 158.0 |
+| Score | 1,200 | P95 | 316.9 | 420.8 | 180.6 |
+| Score | 1,200 | P99 | 359.1 | 424.9 | 185.9 |
+| Score | 1,200 | Min | 311.5 | 360.3 | 133.2 |
+| Score | 1,200 | Max | 363.0 | 432.0 | 192.4 |
+
+### Calibration details
+
+#### Structured-output validity
 
 | Model | Choice | Noul | Score |
 | --- | ---: | ---: | ---: |
@@ -154,98 +201,129 @@ The original-Qwen and SFT JSONL files retain generation latency for every questi
 
 Vision-Jev returns candidates through fixed decision heads, so its structured output is always valid.
 
-### Vision-Jev probability and calibration metrics
+#### Vision-Jev-0.8B probability metrics
 
-| Model | Task | Questions | Accuracy | NLL | Brier | ECE | RPS | MAE |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Vision-Jev-0.8B | Choice | 8,400 | 80.8% | 0.530 | 0.269 | 0.026 | N/A | N/A |
-| Vision-Jev-0.8B | Noul | 2,400 | 81.2% | 0.396 | 0.253 | 0.031 | N/A | N/A |
-| Vision-Jev-0.8B | Score | 1,200 | 55.5% | 1.003 | 0.552 | 0.031 | 0.090 | 0.514 |
-| Vision-Jev-9B | Choice | 8,400 | 74.4% | 0.610 | 0.309 | 0.016 | N/A | N/A |
-| Vision-Jev-9B | Noul | 2,400 | 88.9% | 0.231 | 0.145 | 0.023 | N/A | N/A |
-| Vision-Jev-9B | Score | 1,200 | 62.1% | 0.834 | 0.485 | 0.041 | 0.071 | 0.405 |
+| Metric | Choice | Noul | Score |
+| --- | ---: | ---: | ---: |
+| Questions | 8,400 | 2,400 | 1,200 |
+| **Accuracy** | **80.8%** | **81.2%** | **55.5%** |
+| NLL | 0.530 | 0.396 | 1.003 |
+| Brier | 0.269 | 0.253 | 0.552 |
+| ECE | 0.026 | 0.031 | 0.031 |
+| RPS | N/A | N/A | 0.090 |
+| MAE | N/A | N/A | 0.514 |
 
-</details>
+#### Vision-Jev-9B probability metrics
 
-<details>
-<summary><strong>0.8B results by dataset and task</strong></summary>
+| Metric | Choice | Noul | Score |
+| --- | ---: | ---: | ---: |
+| Questions | 8,400 | 2,400 | 1,200 |
+| **Accuracy** | **74.4%** | **88.9%** | **62.1%** |
+| NLL | 0.610 | 0.231 | 0.834 |
+| Brier | 0.309 | 0.145 | 0.485 |
+| ECE | 0.016 | 0.023 | 0.041 |
+| RPS | N/A | N/A | 0.071 |
+| MAE | N/A | N/A | 0.405 |
 
-Each result cell reports accuracy / mean per-sample latency.
+### 0.8B results by dataset
 
-#### Choice
+Best accuracy and lowest mean latency in each row are shown in bold.
 
-| Dataset | Questions | Qwen3.5-0.8B | Qwen3.5-0.8B + SFT | Vision-Jev-0.8B |
-| --- | ---: | ---: | ---: | ---: |
-| Android Control | 700 | 1.0% / 281.9 ms | 84.1% / 357.2 ms | 52.3% / 173.0 ms |
-| ChartQA | 700 | 53.6% / 234.0 ms | 97.0% / 291.0 ms | 79.4% / 83.7 ms |
-| CLEVR | 700 | 17.9% / 277.9 ms | 93.6% / 288.4 ms | 87.9% / 75.8 ms |
-| GQA | 700 | 29.1% / 278.4 ms | 96.7% / 288.4 ms | 95.9% / 76.4 ms |
-| MultiNLI | 700 | 44.3% / 226.9 ms | 76.3% / 276.7 ms | 72.6% / 52.5 ms |
-| RefCOCO | 700 | 0.0% / 413.4 ms | 95.0% / 434.3 ms | 83.1% / 91.3 ms |
-| RefCOCOg | 700 | 0.0% / 401.8 ms | 90.4% / 431.1 ms | 80.1% / 90.0 ms |
-| RefCOCO+ | 700 | 0.0% / 405.0 ms | 88.4% / 432.4 ms | 78.6% / 91.6 ms |
-| ScienceQA | 700 | 47.1% / 233.9 ms | 85.3% / 289.9 ms | 83.1% / 76.3 ms |
-| TextVQA | 700 | 54.0% / 228.5 ms | 98.0% / 291.7 ms | 92.0% / 85.1 ms |
-| Visual7W | 700 | 20.6% / 340.1 ms | 80.7% / 423.4 ms | 67.7% / 85.3 ms |
-| VQAv2 | 700 | 25.9% / 257.0 ms | 98.9% / 291.7 ms | 96.4% / 81.0 ms |
+#### Accuracy (%)
 
-#### Noul
+| Dataset | Task | Questions | Original Qwen | SFT | **Vision-Jev** |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Android Control | Choice | 700 | 1.0 | **84.1** | 52.3 |
+| ChartQA | Choice | 700 | 53.6 | **97.0** | 79.4 |
+| CLEVR | Choice | 700 | 17.9 | **93.6** | 87.9 |
+| GQA | Choice | 700 | 29.1 | **96.7** | 95.9 |
+| MultiNLI | Choice | 700 | 44.3 | **76.3** | 72.6 |
+| RefCOCO | Choice | 700 | 0.0 | **95.0** | 83.1 |
+| RefCOCOg | Choice | 700 | 0.0 | **90.4** | 80.1 |
+| RefCOCO+ | Choice | 700 | 0.0 | **88.4** | 78.6 |
+| ScienceQA | Choice | 700 | 47.1 | **85.3** | 83.1 |
+| TextVQA | Choice | 700 | 54.0 | **98.0** | 92.0 |
+| Visual7W | Choice | 700 | 20.6 | **80.7** | 67.7 |
+| VQAv2 | Choice | 700 | 25.9 | **98.9** | 96.4 |
+| ChartQA | Noul | 82 | 45.1 | **61.0** | 56.1 |
+| CLEVR | Noul | 580 | 59.3 | **92.6** | 91.6 |
+| GQA | Noul | 580 | 29.8 | 83.1 | **83.8** |
+| NLVR | Noul | 579 | 23.0 | 64.1 | **64.4** |
+| VQAv2 | Noul | 579 | 44.9 | 88.6 | **88.8** |
+| KonIQ-10k | Score | 1,200 | 2.9 | 54.7 | **55.5** |
 
-| Dataset | Questions | Qwen3.5-0.8B | Qwen3.5-0.8B + SFT | Vision-Jev-0.8B |
-| --- | ---: | ---: | ---: | ---: |
-| ChartQA | 82 | 45.1% / 300.0 ms | 61.0% / 265.3 ms | 56.1% / 75.5 ms |
-| CLEVR | 580 | 59.3% / 229.4 ms | 92.6% / 261.0 ms | 91.6% / 73.2 ms |
-| GQA | 580 | 29.8% / 286.2 ms | 83.1% / 262.9 ms | 83.8% / 74.2 ms |
-| NLVR | 579 | 23.0% / 288.2 ms | 64.1% / 259.3 ms | 64.4% / 64.4 ms |
-| VQAv2 | 579 | 44.9% / 274.1 ms | 88.6% / 265.1 ms | 88.8% / 75.8 ms |
+#### Mean latency (ms)
 
-#### Score
+| Dataset | Task | Questions | Original Qwen | SFT | **Vision-Jev** |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Android Control | Choice | 700 | 281.9 | 357.2 | **173.0** |
+| ChartQA | Choice | 700 | 234.0 | 291.0 | **83.7** |
+| CLEVR | Choice | 700 | 277.9 | 288.4 | **75.8** |
+| GQA | Choice | 700 | 278.4 | 288.4 | **76.4** |
+| MultiNLI | Choice | 700 | 226.9 | 276.7 | **52.5** |
+| RefCOCO | Choice | 700 | 413.4 | 434.3 | **91.3** |
+| RefCOCOg | Choice | 700 | 401.8 | 431.1 | **90.0** |
+| RefCOCO+ | Choice | 700 | 405.0 | 432.4 | **91.6** |
+| ScienceQA | Choice | 700 | 233.9 | 289.9 | **76.3** |
+| TextVQA | Choice | 700 | 228.5 | 291.7 | **85.1** |
+| Visual7W | Choice | 700 | 340.1 | 423.4 | **85.3** |
+| VQAv2 | Choice | 700 | 257.0 | 291.7 | **81.0** |
+| ChartQA | Noul | 82 | 300.0 | 265.3 | **75.5** |
+| CLEVR | Noul | 580 | 229.4 | 261.0 | **73.2** |
+| GQA | Noul | 580 | 286.2 | 262.9 | **74.2** |
+| NLVR | Noul | 579 | 288.2 | 259.3 | **64.4** |
+| VQAv2 | Noul | 579 | 274.1 | 265.1 | **75.8** |
+| KonIQ-10k | Score | 1,200 | 469.8 | 255.2 | **112.9** |
 
-| Dataset | Questions | Qwen3.5-0.8B | Qwen3.5-0.8B + SFT | Vision-Jev-0.8B |
-| --- | ---: | ---: | ---: | ---: |
-| KonIQ-10k | 1,200 | 2.9% / 469.8 ms | 54.7% / 255.2 ms | 55.5% / 112.9 ms |
+### 9B results by dataset
 
-</details>
+Best accuracy and lowest mean latency in each row are shown in bold.
 
-<details>
-<summary><strong>9B results by dataset and task</strong></summary>
+#### Accuracy (%)
 
-Each result cell reports accuracy / mean per-sample latency.
+| Dataset | Task | Questions | Original Qwen | SFT | **Vision-Jev** |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Android Control | Choice | 700 | 41.0 | **89.6** | 34.7 |
+| ChartQA | Choice | 700 | 94.7 | **98.0** | 81.6 |
+| CLEVR | Choice | 700 | 90.0 | **98.9** | 96.3 |
+| GQA | Choice | 700 | 96.4 | **98.0** | 97.1 |
+| MultiNLI | Choice | 700 | 73.0 | 86.6 | **87.1** |
+| RefCOCO | Choice | 700 | 96.7 | **97.6** | 60.7 |
+| RefCOCOg | Choice | 700 | 93.1 | **94.9** | 59.7 |
+| RefCOCO+ | Choice | 700 | 90.7 | **93.4** | 56.0 |
+| ScienceQA | Choice | 700 | 94.6 | **97.0** | 95.6 |
+| TextVQA | Choice | 700 | 98.4 | **99.6** | 94.7 |
+| Visual7W | Choice | 700 | 80.4 | **91.4** | 30.3 |
+| VQAv2 | Choice | 700 | 96.6 | **99.7** | 98.6 |
+| ChartQA | Noul | 82 | **80.5** | **80.5** | **80.5** |
+| CLEVR | Noul | 580 | 88.3 | **99.1** | 99.0 |
+| GQA | Noul | 580 | 80.2 | **89.7** | 89.5 |
+| NLVR | Noul | 579 | 64.1 | **74.6** | 73.9 |
+| VQAv2 | Noul | 579 | 89.1 | **95.0** | 94.5 |
+| KonIQ-10k | Score | 1,200 | 32.9 | 60.5 | **62.1** |
 
-#### Choice
+#### Mean latency (ms)
 
-| Dataset | Questions | Qwen3.5-9B | Qwen3.5-9B + SFT | Vision-Jev-9B |
-| --- | ---: | ---: | ---: | ---: |
-| Android Control | 700 | 41.0% / 468.7 ms | 89.6% / 544.1 ms | 34.7% / 237.5 ms |
-| ChartQA | 700 | 94.7% / 330.4 ms | 98.0% / 399.3 ms | 81.6% / 108.4 ms |
-| CLEVR | 700 | 90.0% / 321.8 ms | 98.9% / 392.8 ms | 96.3% / 96.9 ms |
-| GQA | 700 | 96.4% / 326.1 ms | 98.0% / 393.1 ms | 97.1% / 98.7 ms |
-| MultiNLI | 700 | 73.0% / 306.3 ms | 86.6% / 374.5 ms | 87.1% / 67.0 ms |
-| RefCOCO | 700 | 96.7% / 492.4 ms | 97.6% / 595.9 ms | 60.7% / 119.5 ms |
-| RefCOCOg | 700 | 93.1% / 487.7 ms | 94.9% / 588.8 ms | 59.7% / 117.6 ms |
-| RefCOCO+ | 700 | 90.7% / 492.0 ms | 93.4% / 595.6 ms | 56.0% / 119.8 ms |
-| ScienceQA | 700 | 94.6% / 326.7 ms | 97.0% / 394.6 ms | 95.6% / 99.5 ms |
-| TextVQA | 700 | 98.4% / 331.9 ms | 99.6% / 400.1 ms | 94.7% / 109.9 ms |
-| Visual7W | 700 | 80.4% / 476.5 ms | 91.4% / 577.0 ms | 30.3% / 111.0 ms |
-| VQAv2 | 700 | 96.6% / 329.8 ms | 99.7% / 399.7 ms | 98.6% / 105.8 ms |
-
-#### Noul
-
-| Dataset | Questions | Qwen3.5-9B | Qwen3.5-9B + SFT | Vision-Jev-9B |
-| --- | ---: | ---: | ---: | ---: |
-| ChartQA | 82 | 80.5% / 299.6 ms | 80.5% / 364.5 ms | 80.5% / 96.1 ms |
-| CLEVR | 580 | 88.3% / 294.0 ms | 99.1% / 356.5 ms | 99.0% / 94.8 ms |
-| GQA | 580 | 80.2% / 297.4 ms | 89.7% / 358.8 ms | 89.5% / 96.9 ms |
-| NLVR | 579 | 64.1% / 291.7 ms | 74.6% / 354.1 ms | 73.9% / 85.6 ms |
-| VQAv2 | 579 | 89.1% / 300.1 ms | 95.0% / 361.3 ms | 94.5% / 98.6 ms |
-
-#### Score
-
-| Dataset | Questions | Qwen3.5-9B | Qwen3.5-9B + SFT | Vision-Jev-9B |
-| --- | ---: | ---: | ---: | ---: |
-| KonIQ-10k | 1,200 | 32.9% / 315.7 ms | 60.5% / 368.3 ms | 62.1% / 153.9 ms |
-
-</details>
+| Dataset | Task | Questions | Original Qwen | SFT | **Vision-Jev** |
+| --- | --- | ---: | ---: | ---: | ---: |
+| Android Control | Choice | 700 | 468.7 | 544.1 | **237.5** |
+| ChartQA | Choice | 700 | 330.4 | 399.3 | **108.4** |
+| CLEVR | Choice | 700 | 321.8 | 392.8 | **96.9** |
+| GQA | Choice | 700 | 326.1 | 393.1 | **98.7** |
+| MultiNLI | Choice | 700 | 306.3 | 374.5 | **67.0** |
+| RefCOCO | Choice | 700 | 492.4 | 595.9 | **119.5** |
+| RefCOCOg | Choice | 700 | 487.7 | 588.8 | **117.6** |
+| RefCOCO+ | Choice | 700 | 492.0 | 595.6 | **119.8** |
+| ScienceQA | Choice | 700 | 326.7 | 394.6 | **99.5** |
+| TextVQA | Choice | 700 | 331.9 | 400.1 | **109.9** |
+| Visual7W | Choice | 700 | 476.5 | 577.0 | **111.0** |
+| VQAv2 | Choice | 700 | 329.8 | 399.7 | **105.8** |
+| ChartQA | Noul | 82 | 299.6 | 364.5 | **96.1** |
+| CLEVR | Noul | 580 | 294.0 | 356.5 | **94.8** |
+| GQA | Noul | 580 | 297.4 | 358.8 | **96.9** |
+| NLVR | Noul | 579 | 291.7 | 354.1 | **85.6** |
+| VQAv2 | Noul | 579 | 300.1 | 361.3 | **98.6** |
+| KonIQ-10k | Score | 1,200 | 315.7 | 368.3 | **153.9** |
 
 ## Quick start
 
