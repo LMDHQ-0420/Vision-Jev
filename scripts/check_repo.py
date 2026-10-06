@@ -19,7 +19,7 @@ REQUIRED = [
     "docs/training/sft.md",
     "docs/training/ppo.md",
     "docs/evaluation/protocol.md",
-    "docs/overview-zh.md",
+    "README-zh.md",
     "docs/status.md",
     "docs/experiments/index.md",
     "docs/development/showcase.md",

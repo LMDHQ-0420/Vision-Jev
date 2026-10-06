@@ -2,7 +2,7 @@
   <img src="asset/Vision-Jev.svg" alt="Vision-Jev" width="380">
   <h3>An open vision-enabled JEV-like model</h3>
   <p>Training code, data recipe, evaluation protocol, and weights — developed in the open.</p>
-  <p><b>English</b> · <a href="docs/overview-zh.md">简体中文</a> · <a href="docs/index.md">Documentation</a> · <a href="LICENSE">Apache-2.0</a></p>
+  <p><b>English</b> · <a href="README-zh.md">简体中文</a> · <a href="docs/index.md">Documentation</a> · <a href="LICENSE">Apache-2.0</a></p>
   <p><img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white"> <img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-2.7%2B-EE4C2C?logo=pytorch&logoColor=white"> <img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-2ea44f"> <img alt="Status" src="https://img.shields.io/badge/status-SFT%20Preview-2ea44f"></p>
 </div>
 
@@ -27,23 +27,6 @@ Vision-Jev brings visual understanding to the JEV-like modeling paradigm and is 
 ### Open the complete training path
 
 The project will publish the data pipeline, exact quotas, source revisions, deterministic manifests, SFT and policy-training code, evaluation protocol, experiment evidence, model weights, and release cards. Third-party datasets retain their original licenses; this repository publishes the source ledger and reproducible processing path rather than claiming ownership of upstream assets.
-
-## Open data recipe
-
-The SFT mixture contains **117,000 complete public-data questions** and introduces no project-specific human annotation.
-
-| Block | Choice | Noul | Score | Total |
-|---|---:|---:|---:|---:|
-| Public datasets | 94,000 | 17,000 | 6,000 | 117,000 |
-| Local synthetic generation | 0 | 0 | 0 | 0 |
-| **Total** | **94,000** | **17,000** | **6,000** | **117,000** |
-
-The mixture covers GUI actions, region grounding, compositional reasoning, VQA, OCR, charts, language inference, and visual quality. Every sample comes from a pinned public source and preserves its source language.
-
-- [Source ledger](docs/data/sources.md)
-- [Mixture specification](docs/data/mixtures.md)
-- [Machine-readable sources](configs/data/sources.json)
-- [Training recipe](configs/data/sft_117k.json)
 
 ## Frozen test showcase
 
@@ -376,3 +359,20 @@ Start with the [documentation index](docs/index.md), [data pipeline](docs/data/p
 Vision-Jev source code is released under the [Apache License 2.0](LICENSE). Dataset assets and derived releases may carry additional upstream restrictions; consult the [source ledger](docs/data/sources.md) before redistribution or commercial use.
 
 Formal citation metadata will be added with the first model release. Until then, cite the repository URL and exact Git commit used.
+
+## Training data
+
+The SFT mixture contains **117,000 complete public-data questions** and introduces no project-specific human annotation.
+
+| Block | Choice | Noul | Score | Total |
+|---|---:|---:|---:|---:|
+| Public datasets | 94,000 | 17,000 | 6,000 | 117,000 |
+| Local synthetic generation | 0 | 0 | 0 | 0 |
+| **Total** | **94,000** | **17,000** | **6,000** | **117,000** |
+
+The mixture covers GUI actions, region grounding, compositional reasoning, VQA, OCR, charts, language inference, and visual quality. Every sample comes from a pinned public source and preserves its source language.
+
+- [Source ledger](docs/data/sources.md)
+- [Mixture specification](docs/data/mixtures.md)
+- [Machine-readable sources](configs/data/sources.json)
+- [Training recipe](configs/data/sft_117k.json)
