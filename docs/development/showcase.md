@@ -70,7 +70,9 @@ python -m showcase.cli render \
 
 Raw prediction records and generated reports remain under ignored `showcase/output/`.
 Reviewed GIFs belong in `asset/demos/`. Publish the generated section only after all
-configured assets and the test report exist:
+configured assets and the test report exist. The publish command updates `README.md`
+and `docs/overview-zh.md` from the same report; both pages reference the same two GIFs
+in a vertical layout:
 
 ```bash
 python -m showcase.cli readme

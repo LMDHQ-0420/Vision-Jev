@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="asset/Vision-Jev.svg" alt="Vision-Jev" width="380">
+  <img src="../asset/Vision-Jev.svg" alt="Vision-Jev" width="380">
   <h3>一个支持视觉的开源 JEV-like 模型</h3>
   <p>训练代码、数据配额、评测流程与模型权重，全流程开放。</p>
   <p><a href="../README.md">English</a> · <b>简体中文</b> · <a href="index.md">项目文档</a> · <a href="../LICENSE">Apache-2.0</a></p>
@@ -46,8 +46,33 @@ SFT 数据包含 **117,000 道公开来源完整问题**，本项目新增人工
 
 ## 当前进度
 
-公开数据 117k 的 Qwen3.5-0.8B SFT 与静态 RLCD-inspired 训练已经完成。当前使用同一
-流水线复现官方 Qwen3.5-9B；Qwen 官方没有发布 Qwen3.5-7B checkpoint。
+公开数据 117k 的 Qwen3.5-0.8B 与 Qwen3.5-9B SFT、静态 RLCD-inspired 训练均已完成。
+Qwen 官方没有发布 Qwen3.5-7B checkpoint。
+
+<!-- showcase:start -->
+## 静态 RLCD 结果
+
+已发布 checkpoint 在完整冻结的 12,000 题静态 RLCD 测试集上评测。以下汇总包含全部成功与失败样本。
+
+| 模型 | Choice 准确率 | Noul 准确率 | Score 准确率 | Choice 阈值结果 | Noul 阈值结果 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Vision-Jev-0.8B | 80.8% | 81.2% | 55.5% | 93.9%, 覆盖率 65.9% | 94.7%, 覆盖率 53.2% |
+| Vision-Jev-9B | 74.4% | 88.9% | 62.1% | 94.8%, 覆盖率 60.7% | 94.7%, 覆盖率 84.9% |
+
+## 冻结测试集展示
+
+每段动画都让原始 Qwen3.5 checkpoint 与 Vision-Jev 使用同一个冻结测试样本和候选集。类别预先确定; 每个类别选择两套 Vision-Jev checkpoint 都回答正确、通过既定置信阈值且样本 ID 的 SHA-256 最小的样本, 选择过程不使用基线预测。每张 GIF 会依次播放全部固定样例; 两条进度条按照预热后 3 次推理耗时的中位数推进, 并在对应模型完成时显示答案。
+
+覆盖能力: 通用视觉问答、自然图像文本读取、图表推理、组合视觉推理、图示科学推理、证据充分性判断、有序视觉质量评估。
+
+### 0.8B
+
+<p align="center"><img src="../asset/demos/0.8b.gif" alt="0.8B: 原始 Qwen3.5 与 Vision-Jev 冻结 RLCD 样例对比" width="900"></p>
+
+### 9B
+
+<p align="center"><img src="../asset/demos/9b.gif" alt="9B: 原始 Qwen3.5 与 Vision-Jev 冻结 RLCD 样例对比" width="900"></p>
+<!-- showcase:end -->
 
 ## 快速开始
 
@@ -92,27 +117,6 @@ tests/              单元测试与集成测试
 ```
 
 原始数据、checkpoint 和大型运行产物不会提交 Git。
-
-## TODO / Roadmap
-
-- [x] 建立仓库、schema、文档和运行记录契约
-- [x] 完成固定来源下载与 canonical 转换管线
-- [x] 生成并验证 90k 公开核心清单
-- [x] 验证新五来源联合 pilot
-- [x] 完成 GUI-Odyssey 正式训练子集截图物化
-- [x] 冻结并验证 117k 公开数据 manifest
-- [x] 接入 Qwen3.5-0.8B 原生 processor 和主干
-- [x] 完成小批量过拟合与 12k SFT pilot
-- [x] 完成公开数据 117k × 2 SFT
-- [x] 完成并发布 group-safe SFT holdout 测评
-- [ ] 发布经过污染审计的外部视觉测评
-- [ ] 发布可复现的共享图像 1/4/10/20 题延迟结果与自动生成的可视化回放
-- [x] 实现开源可复现的 RLCD-inspired 校准决策后训练
-- [ ] 实现共享前缀推理与概率校准
-- [ ] 在闭环环境中训练 policy/value 分支
-- [ ] 发布模型权重、模型卡、数据卡和复现报告
-
-只有存在可核验的运行证据后，TODO 才会标记完成。
 
 ## 文档与许可
 

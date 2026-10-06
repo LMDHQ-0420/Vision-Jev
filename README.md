@@ -66,9 +66,13 @@ Each animation uses one identical frozen test sample and candidate set for the o
 
 Included capabilities: General visual question answering, Text reading in natural images, Chart reasoning, Compositional visual reasoning, Diagram-grounded science reasoning, Evidence sufficiency judgment, Ordered visual quality assessment.
 
-| 0.8B | 9B |
-| --- | --- |
-| <img src="asset/demos/0.8b.gif" alt="0.8B: original Qwen3.5 versus Vision-Jev across frozen RLCD examples" width="560"> | <img src="asset/demos/9b.gif" alt="9B: original Qwen3.5 versus Vision-Jev across frozen RLCD examples" width="560"> |
+### 0.8B
+
+<p align="center"><img src="asset/demos/0.8b.gif" alt="0.8B: original Qwen3.5 versus Vision-Jev across frozen RLCD examples" width="900"></p>
+
+### 9B
+
+<p align="center"><img src="asset/demos/9b.gif" alt="9B: original Qwen3.5 versus Vision-Jev across frozen RLCD examples" width="900"></p>
 <!-- showcase:end -->
 
 ## Quick start
@@ -114,27 +118,6 @@ tests/              Unit and integration tests
 ```
 
 Raw data, checkpoints, and large run artifacts are excluded from Git.
-
-## Roadmap
-
-- [x] Establish repository, schemas, documentation, and run contracts
-- [x] Build fixed-source download and canonical normalization pipelines
-- [x] Produce and validate the 90k public core manifest
-- [x] Validate the five-source public extension pilot
-- [x] Materialize the full GUI-Odyssey training subset
-- [x] Freeze and validate the 117k public manifest
-- [x] Integrate the native Qwen3.5-0.8B processor and backbone
-- [x] Complete small-batch overfitting and the 12k SFT pilot
-- [x] Train the public-only 117k × 2 SFT model
-- [x] Complete and publish the group-safe SFT holdout evaluation
-- [ ] Publish a contamination-audited external visual evaluation
-- [ ] Publish reproducible shared-image 1/4/10/20-question latency results and a generated visual replay
-- [x] Implement open RLCD-inspired calibrated-decision post-training
-- [ ] Implement shared-prefix inference and calibration
-- [ ] Train the policy/value branch in closed-loop environments
-- [ ] Publish weights, model card, data card, and reproducibility report
-
-The checklist changes only when linked evidence exists.
 
 ## Documentation and license
 

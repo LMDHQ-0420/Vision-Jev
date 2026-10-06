@@ -274,4 +274,26 @@ def test_publish_readme_replaces_only_marker_section(tmp_path: Path) -> None:
     assert updated.startswith("# Before")
     assert "## Static RLCD results" in updated
     assert "## Frozen test showcase" in updated
+    assert '<p align="center"><img src="' in updated
+    assert 'width="900"' in updated
+    assert "| 1B |" not in updated
     assert updated.endswith("## After\n")
+
+    readme_zh = tmp_path / "docs/overview-zh.md"
+    readme_zh.parent.mkdir()
+    readme_zh.write_text(
+        f"# 中文\n\n{START_MARKER}\nold\n{END_MARKER}\n\n## 结尾\n",
+        encoding="utf-8",
+    )
+    publish_readme(
+        config,
+        tmp_path / "asset/demos",
+        report,
+        readme_zh,
+        language="zh",
+        asset_href="../asset/demos",
+    )
+    updated_zh = readme_zh.read_text(encoding="utf-8")
+    assert "## 静态 RLCD 结果" in updated_zh
+    assert "## 冻结测试集展示" in updated_zh
+    assert 'src="../asset/demos/1b.gif"' in updated_zh

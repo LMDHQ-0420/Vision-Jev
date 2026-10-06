@@ -106,7 +106,14 @@ def build_report(args: argparse.Namespace) -> int:
 def readme(args: argparse.Namespace) -> int:
     from showcase.readme import build_fragment
 
-    build_fragment(_config(args), args.asset_root, args.test_report, args.output)
+    build_fragment(
+        _config(args),
+        args.asset_root,
+        args.test_report,
+        args.output,
+        language=args.language,
+        asset_href=args.asset_href,
+    )
     print(args.output)
     return 0
 
@@ -114,8 +121,18 @@ def readme(args: argparse.Namespace) -> int:
 def publish(args: argparse.Namespace) -> int:
     from showcase.readme import publish_readme
 
-    publish_readme(_config(args), args.asset_root, args.test_report, args.readme)
+    config = _config(args)
+    publish_readme(config, args.asset_root, args.test_report, args.readme)
+    publish_readme(
+        config,
+        args.asset_root,
+        args.test_report,
+        args.readme_zh,
+        language="zh",
+        asset_href="../asset/demos",
+    )
     print(args.readme)
+    print(args.readme_zh)
     return 0
 
 
@@ -237,6 +254,8 @@ def parser() -> argparse.ArgumentParser:
     readme_parser.add_argument(
         "--output", type=Path, default=Path("showcase/output/README-demos.md")
     )
+    readme_parser.add_argument("--language", choices=("en", "zh"), default="en")
+    readme_parser.add_argument("--asset-href")
     readme_parser.set_defaults(func=readme)
 
     publish_parser = commands.add_parser("publish-readme")
@@ -245,6 +264,7 @@ def parser() -> argparse.ArgumentParser:
         "--test-report", type=Path, default=Path("showcase/output/static-test-results.json")
     )
     publish_parser.add_argument("--readme", type=Path, default=Path("README.md"))
+    publish_parser.add_argument("--readme-zh", type=Path, default=Path("docs/overview-zh.md"))
     publish_parser.set_defaults(func=publish)
 
     all_parser = commands.add_parser("run-all")
