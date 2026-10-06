@@ -4,6 +4,7 @@ import torch
 
 from vision_jev.train.rlcd import (
     DecisionHeads,
+    _source_threshold_reports,
     calibrated_probabilities,
     decision_loss,
     select_confidence_thresholds,
@@ -62,3 +63,28 @@ def test_threshold_selection_maximizes_eligible_coverage() -> None:
     for task in ("choice", "noul", "score"):
         assert report["by_task"][task]["threshold"] == 0.90
         assert report["by_task"][task]["coverage"] == 2 / 3
+
+
+def test_source_threshold_reports_keep_sources_separate() -> None:
+    records = [
+        {
+            "source": "minigrid",
+            "task_type": "choice",
+            "confidence": 0.9,
+            "correct": True,
+        },
+        {
+            "source": "boxoban",
+            "task_type": "choice",
+            "confidence": 0.9,
+            "correct": False,
+        },
+    ]
+    thresholds = {
+        "by_task": {
+            task: {"threshold": 0.8} for task in ("choice", "noul", "score")
+        }
+    }
+    report = _source_threshold_reports(records, thresholds)
+    assert report["minigrid"]["choice"]["accuracy"] == 1.0
+    assert report["boxoban"]["choice"]["accuracy"] == 0.0

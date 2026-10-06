@@ -472,6 +472,18 @@ def _threshold_report(
     return result
 
 
+def _source_threshold_reports(
+    records: list[dict[str, Any]], thresholds: dict[str, Any]
+) -> dict[str, dict[str, Any]]:
+    sources = sorted({str(row["source"]) for row in records})
+    return {
+        source: _threshold_report(
+            [row for row in records if str(row["source"]) == source], thresholds
+        )
+        for source in sources
+    }
+
+
 def evaluate_rlcd_checkpoint(
     config_path: Path,
     checkpoint: Path,
@@ -526,6 +538,7 @@ def evaluate_rlcd_checkpoint(
     )
     extractor = FeatureExtractor(backbone, processor, config, device)
     totals = _new_totals(device)
+    source_totals: dict[str, Tensor] = {}
     records: list[dict[str, Any]] = []
     output_path.parent.mkdir(parents=True, exist_ok=True)
     started = time.monotonic()
@@ -539,6 +552,10 @@ def evaluate_rlcd_checkpoint(
             probabilities = calibrated_probabilities(task, logits, float(temperatures[task]))
             metrics = _prediction(task, logits, probabilities, sample)
             _record(totals, task, metrics)
+            source = str(sample["source"])
+            if source not in source_totals:
+                source_totals[source] = _new_totals(device)
+            _record(source_totals[source], task, metrics)
             if task == "noul":
                 positive_probability = float(probabilities.item())
                 probability_values = [1.0 - positive_probability, positive_probability]
@@ -559,6 +576,7 @@ def evaluate_rlcd_checkpoint(
             record = {
                 "sample_id": sample["sample_id"],
                 "root_id": sample["root_id"],
+                "source": source,
                 "task_type": task,
                 "target": target,
                 "prediction": predicted,
@@ -589,6 +607,19 @@ def evaluate_rlcd_checkpoint(
             "high_confidence_errors_0_9": sum(
                 not row["correct"] and float(row["confidence"]) >= 0.9 for row in records
             ),
+            "high_confidence_errors_0_9_by_source": {
+                source: sum(
+                    str(row["source"]) == source
+                    and not row["correct"]
+                    and float(row["confidence"]) >= 0.9
+                    for row in records
+                )
+                for source in sorted(source_totals)
+            },
+            "by_source": {
+                source: _report(values.cpu())
+                for source, values in sorted(source_totals.items())
+            },
             "elapsed_seconds": time.monotonic() - started,
             "peak_gpu_memory_bytes": torch.cuda.max_memory_allocated(),
         }
@@ -596,6 +627,9 @@ def evaluate_rlcd_checkpoint(
     if thresholds_path is not None:
         thresholds = json.loads(thresholds_path.read_text(encoding="utf-8"))
         report["threshold_policy"] = _threshold_report(records, thresholds)
+        report["threshold_policy_by_source"] = _source_threshold_reports(
+            records, thresholds
+        )
     if select_thresholds_path is not None:
         if role != "threshold":
             raise ValueError("confidence thresholds may only be selected on the threshold role")

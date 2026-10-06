@@ -30,6 +30,17 @@ Procgen Maze and Boxoban should use the same trajectory contract through isolate
 environment adapters, because Procgen has a pinned Python 3.10 runtime and Boxoban uses
 the repository's custom level parser.
 
+Before recording any single-seed animation, evaluate both released static RLCD checkpoints
+zero-shot on every frozen interactive `threshold`, `audit`, and `test` seed:
+
+```bash
+scripts/evaluate_interactive_zero_shot.sh all /data/vision-jev
+```
+
+Outputs live under each static run's `evaluation-interactive-zero-shot/` directory. This
+evaluation reuses the existing `ChoiceHead`, SFT adapter, static RLCD temperatures, and
+16k role manifest; it does not create training views or write model weights.
+
 ## Run
 
 Install both inference and interactive-environment dependencies in the same environment,
