@@ -44,30 +44,32 @@ def fragment_text(config: ShowcaseConfig, asset_root: Path, test_report: Path) -
     lines.extend(
         [
             "",
-            "## Frozen test examples",
+            "## Frozen test showcase",
             "",
             "Each animation uses one identical frozen test sample and candidate set for the "
             "original Qwen3.5 checkpoint and Vision-Jev. Categories were declared first. "
             "Within each category, the sample is the minimum SHA-256 sample ID for which both "
             "Vision-Jev checkpoints are correct and pass their already-frozen confidence "
-            "threshold; baseline predictions were not used for selection.",
+            "threshold; baseline predictions were not used for selection. Each GIF cycles "
+            "through every configured example. The two progress bars advance on the measured "
+            "median of three post-warmup inference runs, then reveal each model's answer.",
             "",
         ]
     )
-    for example in config.examples:
-        lines.extend([f"### {example.title}", "", example.description, ""])
-        lines.append("| " + " | ".join(groups) + " |")
-        lines.append("| " + " | ".join("---" for _ in groups) + " |")
-        cells = []
-        for group in groups:
-            relative = asset_root / example.id / f"{group.lower()}.gif"
-            if not relative.is_file():
-                raise FileNotFoundError(f"missing showcase GIF: {relative}")
-            cells.append(
-                f'<img src="{relative.as_posix()}" alt="{example.title}, {group}: '
-                'original Qwen3.5 versus Vision-Jev" width="560">'
-            )
-        lines.extend(["| " + " | ".join(cells) + " |", ""])
+    capabilities = ", ".join(example.title for example in config.examples)
+    lines.extend([f"Included capabilities: {capabilities}.", ""])
+    lines.append("| " + " | ".join(groups) + " |")
+    lines.append("| " + " | ".join("---" for _ in groups) + " |")
+    cells = []
+    for group in groups:
+        relative = asset_root / f"{group.lower()}.gif"
+        if not relative.is_file():
+            raise FileNotFoundError(f"missing showcase GIF: {relative}")
+        cells.append(
+            f'<img src="{relative.as_posix()}" alt="{group}: original Qwen3.5 versus '
+            'Vision-Jev across frozen RLCD examples" width="560">'
+        )
+    lines.extend(["| " + " | ".join(cells) + " |", ""])
     return "\n".join(lines).rstrip() + "\n"
 
 

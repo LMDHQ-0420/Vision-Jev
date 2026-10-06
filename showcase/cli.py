@@ -60,7 +60,15 @@ def record(args: argparse.Namespace) -> int:
     sample = selected_sample(example, load_test_samples(args.manifest))
     adapter = load_adapter(model, args.model_root)
     try:
-        path = record_prediction(example, model, sample, adapter, args.output)
+        adapter.predict(sample)
+        path = record_prediction(
+            example,
+            model,
+            sample,
+            adapter,
+            args.output,
+            latency_repetitions=config.latency_repetitions,
+        )
     finally:
         adapter.close()
     print(path)
@@ -113,7 +121,7 @@ def publish(args: argparse.Namespace) -> int:
 
 def run_all(args: argparse.Namespace) -> int:
     from showcase.models import load_adapter
-    from showcase.render import render_static_comparison
+    from showcase.render import render_static_suite
     from showcase.static import load_test_samples, record_prediction, selected_sample
 
     config = _config(args)
@@ -143,9 +151,17 @@ def run_all(args: argparse.Namespace) -> int:
             continue
         adapter = load_adapter(model, args.model_root)
         try:
+            adapter.predict(selected_sample(pending[0], samples))
             for example in pending:
                 sample = selected_sample(example, samples)
-                path = record_prediction(example, model, sample, adapter, args.output)
+                path = record_prediction(
+                    example,
+                    model,
+                    sample,
+                    adapter,
+                    args.output,
+                    latency_repetitions=config.latency_repetitions,
+                )
                 print(f"recorded {path}", flush=True)
         finally:
             adapter.close()
@@ -158,28 +174,30 @@ def run_all(args: argparse.Namespace) -> int:
             raise ValueError(f"filtered parameter group {group!r} is incomplete")
         baseline = next(model for model in members if model.role == "baseline")
         trained = next(model for model in members if model.role == "trained")
-        for example in examples:
-            destination = args.asset_output / example.id / f"{group.lower()}.gif"
-            report = render_static_comparison(
+        destination = args.asset_output / f"{group.lower()}.gif"
+        pairs = [
+            (
                 predictions[(example.id, baseline.id)],
                 predictions[(example.id, trained.id)],
-                destination,
-                frame_duration_ms=config.frame_duration_ms,
             )
-            reports.append(report)
-            print(f"rendered {destination}", flush=True)
+            for example in examples
+        ]
+        report = render_static_suite(
+            pairs,
+            destination,
+            frame_duration_ms=config.progress_frame_duration_ms,
+            completed_hold_ms=config.completed_hold_ms,
+        )
+        reports.append(report)
+        print(f"rendered {destination}", flush=True)
     print(json.dumps(reports, indent=2))
     return 0
 
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(description=__doc__)
-    result.add_argument(
-        "--examples", type=Path, default=Path("showcase/configs/examples.json")
-    )
-    result.add_argument(
-        "--models", type=Path, default=Path("showcase/configs/models.example.json")
-    )
+    result.add_argument("--examples", type=Path, default=Path("showcase/configs/examples.json"))
+    result.add_argument("--models", type=Path, default=Path("showcase/configs/models.example.json"))
     commands = result.add_subparsers(required=True)
 
     shared_manifest = Path("/data/vision-jev/manifests/rlcd/base-72k.jsonl")

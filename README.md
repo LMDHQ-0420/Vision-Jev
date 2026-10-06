@@ -60,65 +60,15 @@ The released checkpoints are evaluated on the complete frozen 12,000-question st
 | Vision-Jev-0.8B | 80.8% | 81.2% | 55.5% | 93.9% at 65.9% coverage | 94.7% at 53.2% coverage |
 | Vision-Jev-9B | 74.4% | 88.9% | 62.1% | 94.8% at 60.7% coverage | 94.7% at 84.9% coverage |
 
-## Frozen test examples
+## Frozen test showcase
 
-Each animation uses one identical frozen test sample and candidate set for the original Qwen3.5 checkpoint and Vision-Jev. Categories were declared first. Within each category, the sample is the minimum SHA-256 sample ID for which both Vision-Jev checkpoints are correct and pass their already-frozen confidence threshold; baseline predictions were not used for selection.
+Each animation uses one identical frozen test sample and candidate set for the original Qwen3.5 checkpoint and Vision-Jev. Categories were declared first. Within each category, the sample is the minimum SHA-256 sample ID for which both Vision-Jev checkpoints are correct and pass their already-frozen confidence threshold; baseline predictions were not used for selection. Each GIF cycles through every configured example. The two progress bars advance on the measured median of three post-warmup inference runs, then reveal each model's answer.
 
-### General visual question answering
-
-Count visible objects and choose the answer grounded in the image.
+Included capabilities: General visual question answering, Text reading in natural images, Chart reasoning, Compositional visual reasoning, Diagram-grounded science reasoning, Evidence sufficiency judgment, Ordered visual quality assessment.
 
 | 0.8B | 9B |
 | --- | --- |
-| <img src="asset/demos/general-vqa/0.8b.gif" alt="General visual question answering, 0.8B: original Qwen3.5 versus Vision-Jev" width="560"> | <img src="asset/demos/general-vqa/9b.gif" alt="General visual question answering, 9B: original Qwen3.5 versus Vision-Jev" width="560"> |
-
-### Text reading in natural images
-
-Read fine-grained text from a product label and select the matching answer.
-
-| 0.8B | 9B |
-| --- | --- |
-| <img src="asset/demos/text-reading/0.8b.gif" alt="Text reading in natural images, 0.8B: original Qwen3.5 versus Vision-Jev" width="560"> | <img src="asset/demos/text-reading/9b.gif" alt="Text reading in natural images, 9B: original Qwen3.5 versus Vision-Jev" width="560"> |
-
-### Chart reasoning
-
-Extract values from a chart and answer a quantitative question.
-
-| 0.8B | 9B |
-| --- | --- |
-| <img src="asset/demos/chart-reasoning/0.8b.gif" alt="Chart reasoning, 0.8B: original Qwen3.5 versus Vision-Jev" width="560"> | <img src="asset/demos/chart-reasoning/9b.gif" alt="Chart reasoning, 9B: original Qwen3.5 versus Vision-Jev" width="560"> |
-
-### Compositional visual reasoning
-
-Combine material, color, shape, and size constraints over a synthetic scene.
-
-| 0.8B | 9B |
-| --- | --- |
-| <img src="asset/demos/compositional-reasoning/0.8b.gif" alt="Compositional visual reasoning, 0.8B: original Qwen3.5 versus Vision-Jev" width="560"> | <img src="asset/demos/compositional-reasoning/9b.gif" alt="Compositional visual reasoning, 9B: original Qwen3.5 versus Vision-Jev" width="560"> |
-
-### Diagram-grounded science reasoning
-
-Use a scientific diagram and accompanying state text to choose the answer.
-
-| 0.8B | 9B |
-| --- | --- |
-| <img src="asset/demos/science-reasoning/0.8b.gif" alt="Diagram-grounded science reasoning, 0.8B: original Qwen3.5 versus Vision-Jev" width="560"> | <img src="asset/demos/science-reasoning/9b.gif" alt="Diagram-grounded science reasoning, 9B: original Qwen3.5 versus Vision-Jev" width="560"> |
-
-### Evidence sufficiency judgment
-
-Return a calibrated true or false judgment from relational visual evidence.
-
-| 0.8B | 9B |
-| --- | --- |
-| <img src="asset/demos/evidence-judgment/0.8b.gif" alt="Evidence sufficiency judgment, 0.8B: original Qwen3.5 versus Vision-Jev" width="560"> | <img src="asset/demos/evidence-judgment/9b.gif" alt="Evidence sufficiency judgment, 9B: original Qwen3.5 versus Vision-Jev" width="560"> |
-
-### Ordered visual quality assessment
-
-Estimate the frozen dataset-relative perceptual quality level.
-
-| 0.8B | 9B |
-| --- | --- |
-| <img src="asset/demos/visual-quality/0.8b.gif" alt="Ordered visual quality assessment, 0.8B: original Qwen3.5 versus Vision-Jev" width="560"> | <img src="asset/demos/visual-quality/9b.gif" alt="Ordered visual quality assessment, 9B: original Qwen3.5 versus Vision-Jev" width="560"> |
+| <img src="asset/demos/0.8b.gif" alt="0.8B: original Qwen3.5 versus Vision-Jev across frozen RLCD examples" width="560"> | <img src="asset/demos/9b.gif" alt="9B: original Qwen3.5 versus Vision-Jev across frozen RLCD examples" width="560"> |
 <!-- showcase:end -->
 
 ## Quick start

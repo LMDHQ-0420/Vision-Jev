@@ -28,8 +28,11 @@ rule:
 4. Original Qwen predictions are never used during selection.
 
 This deliberate accepted-set showcase is paired with the complete 12,000-question test
-table in the README. The animations demonstrate calibrated strengths; the full test
-table remains the measure of overall quality.
+table in the README. One GIF per parameter group cycles through all configured samples.
+Independent progress bars use the median of three post-warmup per-sample inference runs,
+so each answer appears when that model finishes. All three predictions must agree. The
+animations demonstrate calibrated strengths; the full test table remains the measure of
+overall quality.
 
 ## Run
 
@@ -47,21 +50,22 @@ Build a source-aware report from the immutable completed test artifacts:
 python -m showcase.cli build-test-report
 ```
 
-Run every static comparison sequentially. Only one model is resident on the GPU, and
-complete prediction records are skipped when resuming:
+Run every static comparison sequentially. Only one model is resident on the GPU,
+complete prediction records are skipped when resuming, and the final output is
+`asset/demos/0.8b.gif` plus `asset/demos/9b.gif`:
 
 ```bash
 python -m showcase.cli run-all
 ```
 
-Record one model prediction or render one completed pair:
+Record one model prediction or render one completed pair for local inspection:
 
 ```bash
 python -m showcase.cli record --example general-vqa --model qwen35-08b-base
 python -m showcase.cli render \
   --baseline showcase/output/general-vqa/qwen35-08b-base/prediction.json \
   --trained showcase/output/general-vqa/vision-jev-08b/prediction.json \
-  --output asset/demos/general-vqa/0.8b.gif
+  --output showcase/output/general-vqa-preview.gif
 ```
 
 Raw prediction records and generated reports remain under ignored `showcase/output/`.

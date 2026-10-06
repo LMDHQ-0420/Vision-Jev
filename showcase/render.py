@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -86,9 +87,7 @@ def _option_label(sample: dict[str, Any], value: Any) -> str:
     return lookup.get(str(value), str(value))
 
 
-def _draw_context(
-    canvas: Image.Image, draw: ImageDraw.ImageDraw, record: dict[str, Any]
-) -> None:
+def _draw_context(canvas: Image.Image, draw: ImageDraw.ImageDraw, record: dict[str, Any]) -> None:
     example = record["example"]
     sample = record["sample"]
     draw.text((24, 18), example["title"], fill=INK, font=_font(25, bold=True))
@@ -107,26 +106,31 @@ def _draw_context(
     y = 92
     state = str(sample.get("state_text", "")).strip()
     if state:
-        y = _text_block(
-            draw, state, x=x, y=y, width=620, font=_font(15), fill=MUTED, max_lines=4
-        ) + 8
-    y = _text_block(
-        draw,
-        str(sample["question"]),
-        x=x,
-        y=y,
-        width=620,
-        font=_font(22, bold=True),
-        max_lines=5,
-        spacing=7,
-    ) + 16
+        y = (
+            _text_block(draw, state, x=x, y=y, width=620, font=_font(15), fill=MUTED, max_lines=4)
+            + 8
+        )
+    y = (
+        _text_block(
+            draw,
+            str(sample["question"]),
+            x=x,
+            y=y,
+            width=620,
+            font=_font(22, bold=True),
+            max_lines=5,
+            spacing=7,
+        )
+        + 16
+    )
     options = sample["options"]
     if options:
         for option in options[:8]:
             text = f"{option['id']}: {option['text']}"
-            y = _text_block(
-                draw, text, x=x, y=y, width=620, font=_font(16), max_lines=2, spacing=3
-            ) + 5
+            y = (
+                _text_block(draw, text, x=x, y=y, width=620, font=_font(16), max_lines=2, spacing=3)
+                + 5
+            )
     target = ", ".join(_option_label(sample, value) for value in sample["target"])
     draw.text((x, 507), f"Reference: {target}", fill=CORRECT, font=_font(17, bold=True))
 
@@ -136,7 +140,7 @@ def _draw_prediction_panel(
     record: dict[str, Any],
     *,
     x: int,
-    reveal: bool,
+    progress: float,
 ) -> None:
     model = record["model"]
     prediction = record["prediction"]
@@ -145,8 +149,21 @@ def _draw_prediction_panel(
     draw.rounded_rectangle((x, 570, x + 564, 798), 6, fill="#ffffff", outline="#d7dce0")
     draw.rectangle((x, 570, x + 564, 576), fill=accent)
     draw.text((x + 16, 590), model["label"], fill=INK, font=_font(19, bold=True))
-    if not reveal:
-        draw.text((x + 16, 640), "Prediction hidden", fill=MUTED, font=_font(17))
+    progress = max(0.0, min(1.0, progress))
+    draw.rounded_rectangle((x + 16, 625, x + 548, 641), 3, fill="#dde2e6")
+    if progress:
+        draw.rounded_rectangle(
+            (x + 16, 625, x + 16 + max(3, int(532 * progress)), 641),
+            3,
+            fill=accent,
+        )
+    if progress < 1.0:
+        draw.text(
+            (x + 16, 650),
+            f"Running inference... {progress:.0%}",
+            fill=MUTED,
+            font=_font(16),
+        )
         return
     valid = bool(prediction["valid"])
     correct = bool(prediction["correct"])
@@ -154,11 +171,11 @@ def _draw_prediction_panel(
     answer = _option_label(sample, value) if valid else "invalid structured output"
     color = CORRECT if correct else INCORRECT
     status = "correct" if correct else "incorrect"
-    draw.text((x + 16, 630), f"Answer: {answer}", fill=INK, font=_font(18, bold=True))
-    draw.text((x + 16, 662), status, fill=color, font=_font(16, bold=True))
+    draw.text((x + 16, 650), f"Answer: {answer}", fill=INK, font=_font(18, bold=True))
+    draw.text((x + 16, 680), status, fill=color, font=_font(16, bold=True))
     draw.text(
-        (x + 445, 594),
-        f"{float(prediction['latency_ms']):.0f} ms",
+        (x + 430, 594),
+        f"{float(prediction['latency_ms']):.0f} ms total",
         fill=MUTED,
         font=_font(14),
     )
@@ -169,7 +186,7 @@ def _draw_prediction_panel(
             draw,
             f"Generated: {raw}",
             x=x + 16,
-            y=700,
+            y=714,
             width=530,
             font=_font(14),
             fill=MUTED,
@@ -178,7 +195,7 @@ def _draw_prediction_panel(
         return
     ordered = sorted(probabilities.items(), key=lambda item: item[1], reverse=True)[:3]
     for index, (label, probability) in enumerate(ordered):
-        y = 700 + index * 27
+        y = 714 + index * 27
         display = _option_label(sample, label)
         draw.text((x + 16, y), display[:28], fill=INK, font=_font(14))
         draw.rectangle((x + 230, y + 4, x + 500, y + 18), fill="#dde2e6")
@@ -207,12 +224,12 @@ def render_static_comparison(
         raise ValueError("comparison requires baseline then trained predictions")
 
     frames: list[Image.Image] = []
-    for baseline_visible, trained_visible in ((False, False), (True, False), (True, True)):
+    for baseline_progress, trained_progress in ((0.0, 0.0), (1.0, 0.0), (1.0, 1.0)):
         canvas = Image.new("RGB", CANVAS, BACKGROUND)
         draw = ImageDraw.Draw(canvas)
         _draw_context(canvas, draw, baseline)
-        _draw_prediction_panel(draw, baseline, x=24, reveal=baseline_visible)
-        _draw_prediction_panel(draw, trained, x=612, reveal=trained_visible)
+        _draw_prediction_panel(draw, baseline, x=24, progress=baseline_progress)
+        _draw_prediction_panel(draw, trained, x=612, progress=trained_progress)
         frames.append(canvas)
     destination.parent.mkdir(parents=True, exist_ok=True)
     frames[0].save(
@@ -232,4 +249,71 @@ def render_static_comparison(
         "gif": str(destination),
         "baseline": baseline["prediction"],
         "trained": trained["prediction"],
+    }
+
+
+def render_static_suite(
+    prediction_pairs: list[tuple[Path, Path]],
+    destination: Path,
+    *,
+    frame_duration_ms: int = 100,
+    completed_hold_ms: int = 1000,
+) -> dict[str, Any]:
+    if not prediction_pairs:
+        raise ValueError("static suite requires at least one prediction pair")
+    frames: list[Image.Image] = []
+    durations: list[int] = []
+    examples: list[dict[str, Any]] = []
+    parameter_group: str | None = None
+    for baseline_path, trained_path in prediction_pairs:
+        baseline = _load(baseline_path)
+        trained = _load(trained_path)
+        for field in ("sample_id", "image_sha256", "options", "target"):
+            if baseline["sample"][field] != trained["sample"][field]:
+                raise ValueError(f"static suite mismatch for sample.{field}")
+        group = str(baseline["model"]["parameter_group"])
+        if trained["model"]["parameter_group"] != group:
+            raise ValueError("static suite pair uses different parameter groups")
+        if parameter_group is None:
+            parameter_group = group
+        elif parameter_group != group:
+            raise ValueError("static suite cannot mix parameter groups")
+        baseline_latency = max(1.0, float(baseline["prediction"]["latency_ms"]))
+        trained_latency = max(1.0, float(trained["prediction"]["latency_ms"]))
+        maximum_latency = max(baseline_latency, trained_latency)
+        steps = max(1, math.ceil(maximum_latency / frame_duration_ms))
+        for step in range(steps + 1):
+            elapsed = min(maximum_latency, step * frame_duration_ms)
+            canvas = Image.new("RGB", CANVAS, BACKGROUND)
+            draw = ImageDraw.Draw(canvas)
+            _draw_context(canvas, draw, baseline)
+            _draw_prediction_panel(draw, baseline, x=24, progress=elapsed / baseline_latency)
+            _draw_prediction_panel(draw, trained, x=612, progress=elapsed / trained_latency)
+            frames.append(canvas)
+            durations.append(frame_duration_ms)
+        durations[-1] = completed_hold_ms
+        examples.append(
+            {
+                "example_id": baseline["example"]["id"],
+                "sample_id": baseline["sample"]["sample_id"],
+                "baseline": baseline["prediction"],
+                "trained": trained["prediction"],
+            }
+        )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    frames[0].save(
+        destination,
+        save_all=True,
+        append_images=frames[1:],
+        duration=durations,
+        loop=0,
+        optimize=True,
+        disposal=2,
+    )
+    return {
+        "schema_version": 2,
+        "parameter_group": parameter_group,
+        "gif": str(destination),
+        "frames": len(frames),
+        "examples": examples,
     }

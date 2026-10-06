@@ -6,11 +6,11 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from showcase.models import _normalize_generated
+from showcase.models import Prediction, _normalize_generated
 from showcase.readme import END_MARKER, START_MARKER, publish_readme
-from showcase.render import render_static_comparison
-from showcase.schema import ShowcaseConfig, StaticExample
-from showcase.static import is_correct, selected_sample
+from showcase.render import render_static_comparison, render_static_suite
+from showcase.schema import ModelSpec, ShowcaseConfig, StaticExample
+from showcase.static import is_correct, record_prediction, selected_sample
 
 
 def _write_config(root: Path) -> tuple[Path, Path]:
@@ -115,7 +115,47 @@ def test_generated_values_are_task_normalized() -> None:
     assert is_correct("a", {"target": ["a", "b"]})
 
 
-def _prediction(path: Path, image: Path, *, role: str, label: str) -> None:
+def test_record_prediction_uses_repeatable_median_latency(tmp_path: Path) -> None:
+    class Adapter:
+        def __init__(self) -> None:
+            self.predictions = iter(
+                [
+                    Prediction("a", {"a": 1.0}, 30.0),
+                    Prediction("a", {"a": 1.0}, 10.0),
+                    Prediction("a", {"a": 1.0}, 20.0),
+                ]
+            )
+
+        def predict(self, sample: dict[str, object]) -> Prediction:
+            return next(self.predictions)
+
+        def close(self) -> None:
+            pass
+
+    image = tmp_path / "image.png"
+    Image.new("RGB", (8, 8)).save(image)
+    sample = {
+        "sample_id": "sample-1",
+        "root_id": "root-1",
+        "decision_role": "test",
+        "image": str(image),
+        "question": "What is shown?",
+        "options": [{"id": "a", "text": "green"}],
+        "target": "a",
+    }
+    example = StaticExample("vqa", "VQA", "Answer.", "vqav2", "choice", "sample-1")
+    model = ModelSpec("base", "Base", "1B", "baseline", "qwen_base", tmp_path)
+    output = record_prediction(
+        example, model, sample, Adapter(), tmp_path / "output", latency_repetitions=3
+    )
+    record = json.loads(output.read_text(encoding="utf-8"))
+    assert record["prediction"]["latency_samples_ms"] == [30.0, 10.0, 20.0]
+    assert record["prediction"]["latency_ms"] == 20.0
+
+
+def _prediction(
+    path: Path, image: Path, *, role: str, label: str, latency_ms: float = 12.0
+) -> None:
     value = {
         "schema_version": 2,
         "example": {
@@ -146,7 +186,7 @@ def _prediction(path: Path, image: Path, *, role: str, label: str) -> None:
         "prediction": {
             "value": "a",
             "probabilities": {"a": 0.9, "b": 0.1} if role == "trained" else {},
-            "latency_ms": 12.0,
+            "latency_ms": latency_ms,
             "raw_output": '{"choice":"a"}' if role == "baseline" else None,
             "valid": True,
             "correct": True,
@@ -170,10 +210,26 @@ def test_render_static_comparison_creates_three_frame_gif(tmp_path: Path) -> Non
         assert gif.size == (1200, 820)
 
 
+def test_render_static_suite_uses_latency_progress_frames(tmp_path: Path) -> None:
+    image = tmp_path / "image.png"
+    Image.new("RGB", (64, 64), "#31a354").save(image)
+    baseline = tmp_path / "baseline.json"
+    trained = tmp_path / "trained.json"
+    _prediction(baseline, image, role="baseline", label="Qwen", latency_ms=300)
+    _prediction(trained, image, role="trained", label="Vision-Jev", latency_ms=100)
+    output = tmp_path / "suite.gif"
+    report = render_static_suite(
+        [(baseline, trained)], output, frame_duration_ms=100, completed_hold_ms=500
+    )
+    assert report["frames"] == 4
+    with Image.open(output) as gif:
+        assert gif.n_frames == 4
+
+
 def test_publish_readme_replaces_only_marker_section(tmp_path: Path) -> None:
     examples, models = _write_config(tmp_path)
     config = ShowcaseConfig.load(examples, models)
-    asset = tmp_path / "asset/demos/vqa/1b.gif"
+    asset = tmp_path / "asset/demos/1b.gif"
     asset.parent.mkdir(parents=True)
     Image.new("RGB", (2, 2)).save(asset, format="GIF")
     report = tmp_path / "report.json"
@@ -205,4 +261,5 @@ def test_publish_readme_replaces_only_marker_section(tmp_path: Path) -> None:
     updated = readme.read_text(encoding="utf-8")
     assert updated.startswith("# Before")
     assert "## Static RLCD results" in updated
+    assert "## Frozen test showcase" in updated
     assert updated.endswith("## After\n")

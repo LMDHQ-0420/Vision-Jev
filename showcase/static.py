@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import statistics
 from pathlib import Path
 from typing import Any
 
@@ -29,9 +30,7 @@ def load_test_samples(manifest: Path) -> dict[str, dict[str, Any]]:
     return samples
 
 
-def selected_sample(
-    example: StaticExample, samples: dict[str, dict[str, Any]]
-) -> dict[str, Any]:
+def selected_sample(example: StaticExample, samples: dict[str, dict[str, Any]]) -> dict[str, Any]:
     try:
         sample = samples[example.sample_id]
     except KeyError as exc:
@@ -64,11 +63,21 @@ def record_prediction(
     sample: dict[str, Any],
     adapter: ModelAdapter,
     output_root: Path,
+    *,
+    latency_repetitions: int = 3,
 ) -> Path:
     destination = output_root / example.id / model.id / "prediction.json"
     if destination.exists():
         raise FileExistsError(f"showcase prediction already exists: {destination}")
-    prediction = adapter.predict(sample)
+    if latency_repetitions < 1:
+        raise ValueError("latency_repetitions must be positive")
+    predictions = [adapter.predict(sample) for _ in range(latency_repetitions)]
+    values = {prediction.value for prediction in predictions}
+    if len(values) != 1:
+        raise RuntimeError(f"non-deterministic showcase prediction for {example.id}")
+    prediction = predictions[-1]
+    latency_samples = [value.latency_ms for value in predictions]
+    median_latency = statistics.median(latency_samples)
     image = Path(str(sample["image"]))
     record = {
         "schema_version": 2,
@@ -100,7 +109,8 @@ def record_prediction(
         "prediction": {
             "value": prediction.value,
             "probabilities": prediction.probabilities,
-            "latency_ms": prediction.latency_ms,
+            "latency_ms": median_latency,
+            "latency_samples_ms": latency_samples,
             "raw_output": prediction.raw_output,
             "valid": prediction.value is not None,
             "correct": is_correct(prediction.value, sample),

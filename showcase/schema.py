@@ -80,8 +80,7 @@ class ModelSpec:
         if spec.role not in {"baseline", "trained"}:
             raise ValueError(f"unsupported comparison role: {spec.role}")
         if kind == "vision_jev_rlcd" and any(
-            path is None
-            for path in (spec.sft_checkpoint, spec.rlcd_config, spec.rlcd_checkpoint)
+            path is None for path in (spec.sft_checkpoint, spec.rlcd_config, spec.rlcd_checkpoint)
         ):
             raise ValueError(f"RLCD model {spec.id} is missing checkpoint configuration")
         return spec
@@ -89,7 +88,9 @@ class ModelSpec:
 
 @dataclass(frozen=True)
 class ShowcaseConfig:
-    frame_duration_ms: int
+    progress_frame_duration_ms: int
+    completed_hold_ms: int
+    latency_repetitions: int
     manifest_sha256: str
     selection_rule: str
     examples: tuple[StaticExample, ...]
@@ -110,14 +111,22 @@ class ShowcaseConfig:
         _validate_unique("sample", [item.sample_id for item in examples])
         _validate_unique("model", [item.id for item in models])
         _validate_groups(models)
-        frame_duration_ms = int(example_data.get("frame_duration_ms", 1100))
-        if frame_duration_ms < 100:
-            raise ValueError("frame_duration_ms must be at least 100")
+        progress_frame_duration_ms = int(example_data.get("progress_frame_duration_ms", 100))
+        completed_hold_ms = int(example_data.get("completed_hold_ms", 1000))
+        latency_repetitions = int(example_data.get("latency_repetitions", 3))
+        if progress_frame_duration_ms < 50:
+            raise ValueError("progress_frame_duration_ms must be at least 50")
+        if completed_hold_ms < 250:
+            raise ValueError("completed_hold_ms must be at least 250")
+        if latency_repetitions < 1:
+            raise ValueError("latency_repetitions must be positive")
         digest = str(_required(example_data, "manifest_sha256"))
         if len(digest) != 64:
             raise ValueError("manifest_sha256 must be a SHA-256 digest")
         return cls(
-            frame_duration_ms=frame_duration_ms,
+            progress_frame_duration_ms=progress_frame_duration_ms,
+            completed_hold_ms=completed_hold_ms,
+            latency_repetitions=latency_repetitions,
             manifest_sha256=digest,
             selection_rule=str(_required(example_data, "selection_rule")),
             examples=examples,

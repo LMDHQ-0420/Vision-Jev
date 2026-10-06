@@ -1,6 +1,8 @@
 {
   "schema_version": 2,
-  "frame_duration_ms": 1100,
+  "progress_frame_duration_ms": 100,
+  "completed_hold_ms": 1000,
+  "latency_repetitions": 3,
   "manifest_sha256": "cd9c74f0073254d2cbf783aeed3918715bcc6cfc63360aa357b9816f9be5692b",
   "selection_rule": "For each predeclared source and task, require both released Vision-Jev checkpoints to be correct and pass their frozen per-task threshold, then choose the minimum SHA-256(sample_id). Baseline predictions are never used for selection.",
   "examples": [
