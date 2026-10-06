@@ -165,7 +165,9 @@ def parser() -> argparse.ArgumentParser:
 
     readme_parser = commands.add_parser("readme")
     readme_parser.add_argument("--asset-root", type=Path, default=Path("asset/demos"))
-    readme_parser.add_argument("--output", type=Path, default=Path("showcase/output/README.md"))
+    readme_parser.add_argument(
+        "--output", type=Path, default=Path("/tmp/vision-jev-showcase-fragment.md")
+    )
     readme_parser.set_defaults(func=readme)
 
     publish_parser = commands.add_parser("publish-readme")

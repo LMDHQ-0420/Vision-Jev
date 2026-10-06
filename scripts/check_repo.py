@@ -9,8 +9,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED = [
     "README.md",
-    "README_CN.md",
-    "STATUS.md",
     "LICENSE",
     "asset/Vision-Jev.svg",
     "environment.yml",
@@ -21,10 +19,24 @@ REQUIRED = [
     "docs/training/sft.md",
     "docs/training/ppo.md",
     "docs/evaluation/protocol.md",
-    "docs/experiments/README.md",
+    "docs/overview-zh.md",
+    "docs/status.md",
+    "docs/experiments/index.md",
+    "docs/development/showcase.md",
     "docs/release/checklist.md",
     "data/schemas/sample.schema.json",
 ]
+
+IGNORED_MARKDOWN_ROOTS = {
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    ".venv-data",
+    ".venv-procgen",
+    "__pycache__",
+}
 
 
 def main() -> int:
@@ -38,6 +50,21 @@ def main() -> int:
             json.loads(path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
             failures.append(f"invalid JSON {path.relative_to(ROOT)}: {exc}")
+    markdown_paths = (
+        candidate for candidate in ROOT.rglob("*") if candidate.suffix.lower() == ".md"
+    )
+    for path in markdown_paths:
+        relative = path.relative_to(ROOT)
+        if any(part in IGNORED_MARKDOWN_ROOTS for part in relative.parts):
+            continue
+        if relative == Path("README.md"):
+            continue
+        if path.name.lower().startswith("readme"):
+            failures.append(f"only the repository root may contain a README: {relative}")
+            continue
+        if relative.parts[0] == "docs":
+            continue
+        failures.append(f"Markdown must be README.md or live under docs/: {relative}")
     if failures:
         print("\n".join(failures), file=sys.stderr)
         return 1

@@ -2,7 +2,7 @@
   <img src="asset/Vision-Jev.svg" alt="Vision-Jev" width="380">
   <h3>一个支持视觉的开源 JEV-like 模型</h3>
   <p>训练代码、数据配额、评测流程与模型权重，全流程开放。</p>
-  <p><a href="README.md">English</a> · <a href="README_CN.md">简体中文</a> · <a href="docs/index.md">项目文档</a> · <a href="LICENSE">Apache-2.0</a></p>
+  <p><a href="../README.md">English</a> · <b>简体中文</b> · <a href="index.md">项目文档</a> · <a href="../LICENSE">Apache-2.0</a></p>
 </div>
 
 ---
@@ -39,10 +39,10 @@ SFT 数据包含 **117,000 道公开来源完整问题**，本项目新增人工
 
 数据覆盖 GUI 操作、区域定位、组合推理、VQA、OCR、图表理解、文本逻辑和视觉质量。全部样本来自固定版本的公开来源，并保留原始语言。
 
-- [数据来源账本](docs/data/sources.md)
-- [数据混合方案](docs/data/mixtures.md)
-- [机器可读来源](configs/data/sources.json)
-- [训练配方](configs/data/sft_117k.json)
+- [数据来源账本](data/sources.md)
+- [数据混合方案](data/mixtures.md)
+- [机器可读来源](../configs/data/sources.json)
+- [训练配方](../configs/data/sft_117k.json)
 
 ## 当前进度
 
@@ -81,6 +81,7 @@ vision-jev data-build-public \
 
 ```text
 asset/              项目视觉资产
+showcase/           可复现模型对比与动图生成代码
 configs/            数据、模型、训练和评测模板
 data/               Schema、公开样例和来源元数据
 docs/               架构、数据、训练、评测和发布文档
@@ -115,6 +116,6 @@ tests/              单元测试与集成测试
 
 ## 文档与许可
 
-建议从[文档首页](docs/index.md)、[数据流程](docs/data/pipeline.md)、[SFT 教程](docs/training/sft.md)、[评测协议](docs/evaluation/protocol.md)和[发布清单](docs/release/checklist.md)开始。
+建议从[文档首页](index.md)、[数据流程](data/pipeline.md)、[SFT 教程](training/sft.md)、[评测协议](evaluation/protocol.md)和[发布清单](release/checklist.md)开始。
 
-Vision-Jev 源代码采用 [Apache License 2.0](LICENSE)。数据资产和衍生发布可能受到上游许可的额外限制，重新分发或商用前请检查[来源账本](docs/data/sources.md)。首个模型发布时会补充正式引用信息；在此之前，请引用仓库地址和准确 Git commit。
+Vision-Jev 源代码采用 [Apache License 2.0](../LICENSE)。数据资产和衍生发布可能受到上游许可的额外限制，重新分发或商用前请检查[来源账本](data/sources.md)。首个模型发布时会补充正式引用信息；在此之前，请引用仓库地址和准确 Git commit。

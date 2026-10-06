@@ -8,7 +8,7 @@ from PIL import Image
 
 from showcase.readme import END_MARKER, START_MARKER, publish_readme
 from showcase.render import render_comparison
-from showcase.schema import ShowcaseConfig
+from showcase.schema import Example, ShowcaseConfig
 
 
 def test_showcase_config_has_paired_parameter_groups(tmp_path: Path) -> None:
@@ -97,6 +97,24 @@ def test_showcase_config_rejects_unpaired_group(tmp_path: Path) -> None:
     )
     with pytest.raises(ValueError, match="one baseline and one trained"):
         ShowcaseConfig.load(examples, models)
+
+
+def test_visual_example_requires_exactly_one_seed() -> None:
+    with pytest.raises(ValueError, match="exactly one integer seed"):
+        Example.from_dict(
+            {
+                "id": "maze",
+                "title": "Maze",
+                "description": "Navigate.",
+                "environment": {
+                    "family": "minigrid",
+                    "environment_id": "MiniGrid-Empty-5x5-v0",
+                    "seed": [1, 2],
+                    "max_steps": 4,
+                    "actions": ["move_forward"],
+                },
+            }
+        )
 
 
 def _trajectory(path: Path, frame: Path, *, role: str, label: str) -> None:

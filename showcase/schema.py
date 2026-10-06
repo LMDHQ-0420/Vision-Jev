@@ -40,6 +40,9 @@ class Example:
         actions = tuple(str(action) for action in _required(environment, "actions"))
         if not actions or len(actions) != len(set(actions)):
             raise ValueError(f"example {value.get('id')} needs unique actions")
+        seed = _required(environment, "seed")
+        if isinstance(seed, bool) or not isinstance(seed, int):
+            raise ValueError(f"example {value.get('id')} requires exactly one integer seed")
         max_steps = int(_required(environment, "max_steps"))
         if max_steps < 1:
             raise ValueError("max_steps must be positive")
@@ -48,7 +51,7 @@ class Example:
             title=str(_required(value, "title")),
             description=str(_required(value, "description")),
             environment_id=str(_required(environment, "environment_id")),
-            seed=int(_required(environment, "seed")),
+            seed=seed,
             max_steps=max_steps,
             actions=actions,
         )

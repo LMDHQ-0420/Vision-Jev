@@ -1,4 +1,4 @@
-# Data directory
+# 数据目录约定
 
 版本库只保存 schema、样例、来源账本和 manifest 元数据。原始/中间/处理数据分别放在被 `.gitignore` 排除的 `data/raw`, `data/interim`, `data/processed`，或通过环境配置指向外部只读存储。
 

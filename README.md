@@ -2,7 +2,7 @@
   <img src="asset/Vision-Jev.svg" alt="Vision-Jev" width="380">
   <h3>An open vision-enabled JEV-like model</h3>
   <p>Training code, data recipe, evaluation protocol, and weights — developed in the open.</p>
-  <p><a href="README.md">English</a> · <a href="README_CN.md">简体中文</a> · <a href="docs/index.md">Documentation</a> · <a href="LICENSE">Apache-2.0</a></p>
+  <p><b>English</b> · <a href="docs/overview-zh.md">简体中文</a> · <a href="docs/index.md">Documentation</a> · <a href="LICENSE">Apache-2.0</a></p>
   <p><img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white"> <img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-2.7%2B-EE4C2C?logo=pytorch&logoColor=white"> <img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-2ea44f"> <img alt="Status" src="https://img.shields.io/badge/status-SFT%20Preview-2ea44f"></p>
 </div>
 
@@ -54,7 +54,8 @@ publish a Qwen3.5-7B checkpoint.
 <!-- showcase:start -->
 ## Interactive comparisons
 
-The reproducible side-by-side demo pipeline is implemented in [`showcase/`](showcase/README.md).
+The reproducible side-by-side demo pipeline is documented in the
+[showcase guide](docs/development/showcase.md).
 Reviewed animations will be published here after both parameter groups finish the same
 fixed-seed episodes.
 <!-- showcase:end -->
@@ -91,7 +92,7 @@ Every JSONL row is one complete question; candidates are never expanded into fak
 
 ```text
 asset/              Brand assets
-showcase/           Reproducible side-by-side model demos
+showcase/           Reproducible side-by-side demo implementation
 configs/            Data, model, training, and evaluation templates
 data/               Schemas, public examples, and source metadata
 docs/               Architecture, data, training, evaluation, and release guides

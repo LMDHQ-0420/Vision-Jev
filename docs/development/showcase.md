@@ -13,7 +13,8 @@ Each example is evaluated twice per parameter group:
 | 0.8B | Original Qwen3.5-0.8B | Vision-Jev-0.8B |
 | 9B | Original Qwen3.5-9B | Vision-Jev-9B |
 
-Both panels receive the same rendered state, mission, candidates, environment seed,
+Each visual example freezes exactly one unseen seed. Both panels receive the same
+rendered state, mission, candidates, environment seed,
 maximum step count, and greedy decoding policy. Baseline parse failures are shown as
 failures; the recorder never substitutes an oracle action. Every trajectory stores frame
 hashes, actions, calibrated probabilities when available, per-step latency, and outcome.
@@ -75,7 +76,8 @@ python -m showcase.cli publish-readme
 
 ## Selection rules
 
-- Reserve unseen seeds before running either model.
+- Reserve exactly one unseen seed per visual example before running any model.
+- Use multi-seed evaluation only in the formal test protocol, not inside a README animation.
 - Keep failed runs; do not search seeds independently for Vision-Jev and Qwen.
 - Publish all configured examples or disclose the deterministic selection rule.
 - Report success, decisions, cumulative model latency, and invalid output failures.
