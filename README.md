@@ -46,44 +46,41 @@ The mixture covers GUI actions, region grounding, compositional reasoning, VQA, 
 - [Training recipe](configs/data/sft_117k.json)
 
 <!-- showcase:start -->
+## Frozen test showcase
+
+Each animation uses one identical frozen test sample and candidate set for the original Qwen3.5 checkpoint and Vision-Jev. Categories were declared first. Within each category, the sample is the minimum SHA-256 sample ID for which both Vision-Jev checkpoints are correct and pass their already-frozen confidence threshold; baseline predictions were not used for selection. Each GIF cycles through every configured example. The two progress bars advance on the measured median of three post-warmup inference runs, then reveal each model's answer.
+
+Included capabilities: General visual question answering, Text reading in natural images, Chart reasoning, Compositional visual reasoning, Diagram-grounded science reasoning, Evidence sufficiency judgment, Ordered visual quality assessment.
+
+### 0.8B
+
+<p align="center"><img src="asset/demos/0.8b.gif" alt="0.8B: original Qwen3.5 versus Vision-Jev across frozen RLCD examples" width="900"></p>
+
+### 9B
+
+<p align="center"><img src="asset/demos/9b.gif" alt="9B: original Qwen3.5 versus Vision-Jev across frozen RLCD examples" width="900"></p>
+
 ## Static RLCD results
 
-Original Qwen, the completed SFT-only checkpoint, and Vision-Jev with its static RLCD decision heads are evaluated on the same complete frozen 12,000-question test split. These aggregate results include every success and failure, so raw-accuracy regressions between stages remain visible. Original Qwen and SFT-only generation do not provide calibrated decision-head probabilities, so their threshold columns are N/A.
+Original Qwen, the completed SFT-only checkpoint, and Vision-Jev with its static RLCD decision heads are evaluated on the same complete frozen 12,000-question test split. These aggregate results include every success and failure, so raw-accuracy regressions between stages remain visible. Original Qwen and SFT-only generation do not provide calibrated decision-head probabilities, so accepted-set calibration is reported only for Vision-Jev.
 
-| Model | Choice accuracy | Noul accuracy | Score accuracy | Choice accepted accuracy | Noul accepted accuracy |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Qwen3.5-0.8B (original) | 24.5% | 39.5% | 2.9% | N/A | N/A |
-| Qwen3.5-0.8B + SFT | 90.4% | 81.4% | 54.7% | N/A | N/A |
-| Vision-Jev-0.8B | 80.8% | 81.2% | 55.5% | 93.9% at 65.9% coverage | 94.7% at 53.2% coverage |
-| Qwen3.5-9B (original) | 87.1% | 80.4% | 32.9% | N/A | N/A |
-| Qwen3.5-9B + SFT | 95.4% | 89.3% | 60.5% | N/A | N/A |
-| Vision-Jev-9B | 74.4% | 88.9% | 62.1% | 94.8% at 60.7% coverage | 94.7% at 84.9% coverage |
-
-### Structured-output validity
+### 0.8B summary
 
 | Model | Choice | Noul | Score |
 | --- | ---: | ---: | ---: |
-| Qwen3.5-0.8B | 37.4% | 61.0% | 22.2% |
-| Qwen3.5-0.8B + SFT | 100.0% | 100.0% | 100.0% |
-| Vision-Jev-0.8B | 100.0% | 100.0% | 100.0% |
-| Qwen3.5-9B | 99.5% | 100.0% | 100.0% |
-| Qwen3.5-9B + SFT | 100.0% | 100.0% | 100.0% |
-| Vision-Jev-9B | 100.0% | 100.0% | 100.0% |
+| Qwen3.5-0.8B (original) | 24.5% | 39.5% | 2.9% |
+| Qwen3.5-0.8B + SFT | 90.4% | 81.4% | 54.7% |
+| Vision-Jev-0.8B | 80.8% | 81.2% | 55.5% |
 
-Vision-Jev returns candidates through fixed decision heads, so its structured output is always valid.
+### 9B summary
 
-### Vision-Jev probability and calibration metrics
+| Model | Choice | Noul | Score |
+| --- | ---: | ---: | ---: |
+| Qwen3.5-9B (original) | 87.1% | 80.4% | 32.9% |
+| Qwen3.5-9B + SFT | 95.4% | 89.3% | 60.5% |
+| Vision-Jev-9B | 74.4% | 88.9% | 62.1% |
 
-| Model | Task | Questions | Accuracy | NLL | Brier | ECE | RPS | MAE |
-| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Vision-Jev-0.8B | Choice | 8,400 | 80.8% | 0.530 | 0.269 | 0.026 | N/A | N/A |
-| Vision-Jev-0.8B | Noul | 2,400 | 81.2% | 0.396 | 0.253 | 0.031 | N/A | N/A |
-| Vision-Jev-0.8B | Score | 1,200 | 55.5% | 1.003 | 0.552 | 0.031 | 0.090 | 0.514 |
-| Vision-Jev-9B | Choice | 8,400 | 74.4% | 0.610 | 0.309 | 0.016 | N/A | N/A |
-| Vision-Jev-9B | Noul | 2,400 | 88.9% | 0.231 | 0.145 | 0.023 | N/A | N/A |
-| Vision-Jev-9B | Score | 1,200 | 62.1% | 0.834 | 0.485 | 0.041 | 0.071 | 0.405 |
-
-#### Threshold policy
+### Accepted-set calibration
 
 | Model | Task | Threshold | Coverage | Accepted accuracy |
 | --- | --- | ---: | ---: | ---: |
@@ -116,7 +113,8 @@ The original-Qwen and SFT JSONL files retain generation latency for every questi
 | Qwen3.5-9B + SFT | Per-question generation | 5259.5 | 438.3 | 392.0 | 609.1 | 691.4 | 344.2 | 754.0 |
 | Vision-Jev-9B | Full decision loop | 1384.5 | 115.4 | 105.6 | 197.3 | 273.0 | 55.1 | 318.5 |
 
-#### Timing by task
+<details>
+<summary><strong>Timing by task</strong></summary>
 
 | Model | Task | Samples | Mean (ms) | P50 | P95 | P99 | Min | Max |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -139,69 +137,116 @@ The original-Qwen and SFT JSONL files retain generation latency for every questi
 | Vision-Jev-9B | Noul | 2,400 | 94.1 | 96.0 | 111.8 | 122.6 | 72.7 | 133.2 |
 | Vision-Jev-9B | Score | 1,200 | 153.9 | 158.0 | 180.6 | 185.9 | 133.2 | 192.4 |
 
-### 0.8B results by dataset and task
+</details>
+
+<details>
+<summary><strong>Calibration details</strong></summary>
+
+### Structured-output validity
+
+| Model | Choice | Noul | Score |
+| --- | ---: | ---: | ---: |
+| Qwen3.5-0.8B | 37.4% | 61.0% | 22.2% |
+| Qwen3.5-0.8B + SFT | 100.0% | 100.0% | 100.0% |
+| Vision-Jev-0.8B | 100.0% | 100.0% | 100.0% |
+| Qwen3.5-9B | 99.5% | 100.0% | 100.0% |
+| Qwen3.5-9B + SFT | 100.0% | 100.0% | 100.0% |
+| Vision-Jev-9B | 100.0% | 100.0% | 100.0% |
+
+Vision-Jev returns candidates through fixed decision heads, so its structured output is always valid.
+
+### Vision-Jev probability and calibration metrics
+
+| Model | Task | Questions | Accuracy | NLL | Brier | ECE | RPS | MAE |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Vision-Jev-0.8B | Choice | 8,400 | 80.8% | 0.530 | 0.269 | 0.026 | N/A | N/A |
+| Vision-Jev-0.8B | Noul | 2,400 | 81.2% | 0.396 | 0.253 | 0.031 | N/A | N/A |
+| Vision-Jev-0.8B | Score | 1,200 | 55.5% | 1.003 | 0.552 | 0.031 | 0.090 | 0.514 |
+| Vision-Jev-9B | Choice | 8,400 | 74.4% | 0.610 | 0.309 | 0.016 | N/A | N/A |
+| Vision-Jev-9B | Noul | 2,400 | 88.9% | 0.231 | 0.145 | 0.023 | N/A | N/A |
+| Vision-Jev-9B | Score | 1,200 | 62.1% | 0.834 | 0.485 | 0.041 | 0.071 | 0.405 |
+
+</details>
+
+<details>
+<summary><strong>0.8B results by dataset and task</strong></summary>
 
 Each result cell reports accuracy / mean per-sample latency.
 
-| Dataset | Task | Questions | Qwen3.5-0.8B | Qwen3.5-0.8B + SFT | Vision-Jev-0.8B |
-| --- | --- | ---: | ---: | ---: | ---: |
-| Android Control | Choice | 700 | 1.0% / 281.9 ms | 84.1% / 357.2 ms | 52.3% / 173.0 ms |
-| ChartQA | Choice | 700 | 53.6% / 234.0 ms | 97.0% / 291.0 ms | 79.4% / 83.7 ms |
-| ChartQA | Noul | 82 | 45.1% / 300.0 ms | 61.0% / 265.3 ms | 56.1% / 75.5 ms |
-| CLEVR | Choice | 700 | 17.9% / 277.9 ms | 93.6% / 288.4 ms | 87.9% / 75.8 ms |
-| CLEVR | Noul | 580 | 59.3% / 229.4 ms | 92.6% / 261.0 ms | 91.6% / 73.2 ms |
-| GQA | Choice | 700 | 29.1% / 278.4 ms | 96.7% / 288.4 ms | 95.9% / 76.4 ms |
-| GQA | Noul | 580 | 29.8% / 286.2 ms | 83.1% / 262.9 ms | 83.8% / 74.2 ms |
-| KonIQ-10k | Score | 1,200 | 2.9% / 469.8 ms | 54.7% / 255.2 ms | 55.5% / 112.9 ms |
-| MultiNLI | Choice | 700 | 44.3% / 226.9 ms | 76.3% / 276.7 ms | 72.6% / 52.5 ms |
-| NLVR | Noul | 579 | 23.0% / 288.2 ms | 64.1% / 259.3 ms | 64.4% / 64.4 ms |
-| RefCOCO | Choice | 700 | 0.0% / 413.4 ms | 95.0% / 434.3 ms | 83.1% / 91.3 ms |
-| RefCOCOg | Choice | 700 | 0.0% / 401.8 ms | 90.4% / 431.1 ms | 80.1% / 90.0 ms |
-| RefCOCO+ | Choice | 700 | 0.0% / 405.0 ms | 88.4% / 432.4 ms | 78.6% / 91.6 ms |
-| ScienceQA | Choice | 700 | 47.1% / 233.9 ms | 85.3% / 289.9 ms | 83.1% / 76.3 ms |
-| TextVQA | Choice | 700 | 54.0% / 228.5 ms | 98.0% / 291.7 ms | 92.0% / 85.1 ms |
-| Visual7W | Choice | 700 | 20.6% / 340.1 ms | 80.7% / 423.4 ms | 67.7% / 85.3 ms |
-| VQAv2 | Choice | 700 | 25.9% / 257.0 ms | 98.9% / 291.7 ms | 96.4% / 81.0 ms |
-| VQAv2 | Noul | 579 | 44.9% / 274.1 ms | 88.6% / 265.1 ms | 88.8% / 75.8 ms |
+#### Choice
 
-### 9B results by dataset and task
+| Dataset | Questions | Qwen3.5-0.8B | Qwen3.5-0.8B + SFT | Vision-Jev-0.8B |
+| --- | ---: | ---: | ---: | ---: |
+| Android Control | 700 | 1.0% / 281.9 ms | 84.1% / 357.2 ms | 52.3% / 173.0 ms |
+| ChartQA | 700 | 53.6% / 234.0 ms | 97.0% / 291.0 ms | 79.4% / 83.7 ms |
+| CLEVR | 700 | 17.9% / 277.9 ms | 93.6% / 288.4 ms | 87.9% / 75.8 ms |
+| GQA | 700 | 29.1% / 278.4 ms | 96.7% / 288.4 ms | 95.9% / 76.4 ms |
+| MultiNLI | 700 | 44.3% / 226.9 ms | 76.3% / 276.7 ms | 72.6% / 52.5 ms |
+| RefCOCO | 700 | 0.0% / 413.4 ms | 95.0% / 434.3 ms | 83.1% / 91.3 ms |
+| RefCOCOg | 700 | 0.0% / 401.8 ms | 90.4% / 431.1 ms | 80.1% / 90.0 ms |
+| RefCOCO+ | 700 | 0.0% / 405.0 ms | 88.4% / 432.4 ms | 78.6% / 91.6 ms |
+| ScienceQA | 700 | 47.1% / 233.9 ms | 85.3% / 289.9 ms | 83.1% / 76.3 ms |
+| TextVQA | 700 | 54.0% / 228.5 ms | 98.0% / 291.7 ms | 92.0% / 85.1 ms |
+| Visual7W | 700 | 20.6% / 340.1 ms | 80.7% / 423.4 ms | 67.7% / 85.3 ms |
+| VQAv2 | 700 | 25.9% / 257.0 ms | 98.9% / 291.7 ms | 96.4% / 81.0 ms |
+
+#### Noul
+
+| Dataset | Questions | Qwen3.5-0.8B | Qwen3.5-0.8B + SFT | Vision-Jev-0.8B |
+| --- | ---: | ---: | ---: | ---: |
+| ChartQA | 82 | 45.1% / 300.0 ms | 61.0% / 265.3 ms | 56.1% / 75.5 ms |
+| CLEVR | 580 | 59.3% / 229.4 ms | 92.6% / 261.0 ms | 91.6% / 73.2 ms |
+| GQA | 580 | 29.8% / 286.2 ms | 83.1% / 262.9 ms | 83.8% / 74.2 ms |
+| NLVR | 579 | 23.0% / 288.2 ms | 64.1% / 259.3 ms | 64.4% / 64.4 ms |
+| VQAv2 | 579 | 44.9% / 274.1 ms | 88.6% / 265.1 ms | 88.8% / 75.8 ms |
+
+#### Score
+
+| Dataset | Questions | Qwen3.5-0.8B | Qwen3.5-0.8B + SFT | Vision-Jev-0.8B |
+| --- | ---: | ---: | ---: | ---: |
+| KonIQ-10k | 1,200 | 2.9% / 469.8 ms | 54.7% / 255.2 ms | 55.5% / 112.9 ms |
+
+</details>
+
+<details>
+<summary><strong>9B results by dataset and task</strong></summary>
 
 Each result cell reports accuracy / mean per-sample latency.
 
-| Dataset | Task | Questions | Qwen3.5-9B | Qwen3.5-9B + SFT | Vision-Jev-9B |
-| --- | --- | ---: | ---: | ---: | ---: |
-| Android Control | Choice | 700 | 41.0% / 468.7 ms | 89.6% / 544.1 ms | 34.7% / 237.5 ms |
-| ChartQA | Choice | 700 | 94.7% / 330.4 ms | 98.0% / 399.3 ms | 81.6% / 108.4 ms |
-| ChartQA | Noul | 82 | 80.5% / 299.6 ms | 80.5% / 364.5 ms | 80.5% / 96.1 ms |
-| CLEVR | Choice | 700 | 90.0% / 321.8 ms | 98.9% / 392.8 ms | 96.3% / 96.9 ms |
-| CLEVR | Noul | 580 | 88.3% / 294.0 ms | 99.1% / 356.5 ms | 99.0% / 94.8 ms |
-| GQA | Choice | 700 | 96.4% / 326.1 ms | 98.0% / 393.1 ms | 97.1% / 98.7 ms |
-| GQA | Noul | 580 | 80.2% / 297.4 ms | 89.7% / 358.8 ms | 89.5% / 96.9 ms |
-| KonIQ-10k | Score | 1,200 | 32.9% / 315.7 ms | 60.5% / 368.3 ms | 62.1% / 153.9 ms |
-| MultiNLI | Choice | 700 | 73.0% / 306.3 ms | 86.6% / 374.5 ms | 87.1% / 67.0 ms |
-| NLVR | Noul | 579 | 64.1% / 291.7 ms | 74.6% / 354.1 ms | 73.9% / 85.6 ms |
-| RefCOCO | Choice | 700 | 96.7% / 492.4 ms | 97.6% / 595.9 ms | 60.7% / 119.5 ms |
-| RefCOCOg | Choice | 700 | 93.1% / 487.7 ms | 94.9% / 588.8 ms | 59.7% / 117.6 ms |
-| RefCOCO+ | Choice | 700 | 90.7% / 492.0 ms | 93.4% / 595.6 ms | 56.0% / 119.8 ms |
-| ScienceQA | Choice | 700 | 94.6% / 326.7 ms | 97.0% / 394.6 ms | 95.6% / 99.5 ms |
-| TextVQA | Choice | 700 | 98.4% / 331.9 ms | 99.6% / 400.1 ms | 94.7% / 109.9 ms |
-| Visual7W | Choice | 700 | 80.4% / 476.5 ms | 91.4% / 577.0 ms | 30.3% / 111.0 ms |
-| VQAv2 | Choice | 700 | 96.6% / 329.8 ms | 99.7% / 399.7 ms | 98.6% / 105.8 ms |
-| VQAv2 | Noul | 579 | 89.1% / 300.1 ms | 95.0% / 361.3 ms | 94.5% / 98.6 ms |
+#### Choice
 
-## Frozen test showcase
+| Dataset | Questions | Qwen3.5-9B | Qwen3.5-9B + SFT | Vision-Jev-9B |
+| --- | ---: | ---: | ---: | ---: |
+| Android Control | 700 | 41.0% / 468.7 ms | 89.6% / 544.1 ms | 34.7% / 237.5 ms |
+| ChartQA | 700 | 94.7% / 330.4 ms | 98.0% / 399.3 ms | 81.6% / 108.4 ms |
+| CLEVR | 700 | 90.0% / 321.8 ms | 98.9% / 392.8 ms | 96.3% / 96.9 ms |
+| GQA | 700 | 96.4% / 326.1 ms | 98.0% / 393.1 ms | 97.1% / 98.7 ms |
+| MultiNLI | 700 | 73.0% / 306.3 ms | 86.6% / 374.5 ms | 87.1% / 67.0 ms |
+| RefCOCO | 700 | 96.7% / 492.4 ms | 97.6% / 595.9 ms | 60.7% / 119.5 ms |
+| RefCOCOg | 700 | 93.1% / 487.7 ms | 94.9% / 588.8 ms | 59.7% / 117.6 ms |
+| RefCOCO+ | 700 | 90.7% / 492.0 ms | 93.4% / 595.6 ms | 56.0% / 119.8 ms |
+| ScienceQA | 700 | 94.6% / 326.7 ms | 97.0% / 394.6 ms | 95.6% / 99.5 ms |
+| TextVQA | 700 | 98.4% / 331.9 ms | 99.6% / 400.1 ms | 94.7% / 109.9 ms |
+| Visual7W | 700 | 80.4% / 476.5 ms | 91.4% / 577.0 ms | 30.3% / 111.0 ms |
+| VQAv2 | 700 | 96.6% / 329.8 ms | 99.7% / 399.7 ms | 98.6% / 105.8 ms |
 
-Each animation uses one identical frozen test sample and candidate set for the original Qwen3.5 checkpoint and Vision-Jev. Categories were declared first. Within each category, the sample is the minimum SHA-256 sample ID for which both Vision-Jev checkpoints are correct and pass their already-frozen confidence threshold; baseline predictions were not used for selection. Each GIF cycles through every configured example. The two progress bars advance on the measured median of three post-warmup inference runs, then reveal each model's answer.
+#### Noul
 
-Included capabilities: General visual question answering, Text reading in natural images, Chart reasoning, Compositional visual reasoning, Diagram-grounded science reasoning, Evidence sufficiency judgment, Ordered visual quality assessment.
+| Dataset | Questions | Qwen3.5-9B | Qwen3.5-9B + SFT | Vision-Jev-9B |
+| --- | ---: | ---: | ---: | ---: |
+| ChartQA | 82 | 80.5% / 299.6 ms | 80.5% / 364.5 ms | 80.5% / 96.1 ms |
+| CLEVR | 580 | 88.3% / 294.0 ms | 99.1% / 356.5 ms | 99.0% / 94.8 ms |
+| GQA | 580 | 80.2% / 297.4 ms | 89.7% / 358.8 ms | 89.5% / 96.9 ms |
+| NLVR | 579 | 64.1% / 291.7 ms | 74.6% / 354.1 ms | 73.9% / 85.6 ms |
+| VQAv2 | 579 | 89.1% / 300.1 ms | 95.0% / 361.3 ms | 94.5% / 98.6 ms |
 
-### 0.8B
+#### Score
 
-<p align="center"><img src="asset/demos/0.8b.gif" alt="0.8B: original Qwen3.5 versus Vision-Jev across frozen RLCD examples" width="900"></p>
+| Dataset | Questions | Qwen3.5-9B | Qwen3.5-9B + SFT | Vision-Jev-9B |
+| --- | ---: | ---: | ---: | ---: |
+| KonIQ-10k | 1,200 | 32.9% / 315.7 ms | 60.5% / 368.3 ms | 62.1% / 153.9 ms |
 
-### 9B
-
-<p align="center"><img src="asset/demos/9b.gif" alt="9B: original Qwen3.5 versus Vision-Jev across frozen RLCD examples" width="900"></p>
+</details>
 <!-- showcase:end -->
 
 ## Quick start

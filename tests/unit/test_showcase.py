@@ -479,7 +479,12 @@ def test_publish_readme_replaces_only_marker_section(tmp_path: Path) -> None:
     assert updated.startswith("# Before")
     assert "## Static RLCD results" in updated
     assert "## Frozen test showcase" in updated
+    assert updated.index("## Frozen test showcase") < updated.index("## Static RLCD results")
     assert "Base (original)" in updated
+    assert "<summary><strong>Timing by task</strong></summary>" in updated
+    assert "<summary><strong>1B results by dataset and task</strong></summary>" in updated
+    assert updated.count("<details>") == updated.count("</details>")
+    assert updated.count("<details>") >= 3
     assert '<p align="center"><img src="' in updated
     assert 'width="900"' in updated
     assert "| 1B |" not in updated

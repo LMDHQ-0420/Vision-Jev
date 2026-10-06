@@ -68,7 +68,7 @@ def _result_rows(
             f"| {baseline_model.label} ({'原始' if language == 'zh' else 'original'}) | "
             f"{_percent(baseline_tasks['choice']['accuracy'])} | "
             f"{_percent(baseline_tasks['noul']['accuracy'])} | "
-            f"{_percent(baseline_tasks['score']['accuracy'])} | N/A | N/A |"
+            f"{_percent(baseline_tasks['score']['accuracy'])} |"
         )
         sft_summary = report["sft_models"][group]["summary"]
         sft_tasks = sft_summary["by_task"]
@@ -80,28 +80,13 @@ def _result_rows(
         rows.append(
             f"| {sft_model.label} | {_percent(sft_tasks['choice']['accuracy'])} | "
             f"{_percent(sft_tasks['noul']['accuracy'])} | "
-            f"{_percent(sft_tasks['score']['accuracy'])} | N/A | N/A |"
+            f"{_percent(sft_tasks['score']['accuracy'])} |"
         )
         summary = report["models"][group]["summary"]
         tasks = summary["by_task"]
-        policy = summary["threshold_policy"]
-        choice_policy = (
-            f"{_percent(policy['choice']['accuracy'])}, 覆盖率 "
-            f"{_percent(policy['choice']['coverage'])}"
-            if language == "zh"
-            else f"{_percent(policy['choice']['accuracy'])} at "
-            f"{_percent(policy['choice']['coverage'])} coverage"
-        )
-        noul_policy = (
-            f"{_percent(policy['noul']['accuracy'])}, 覆盖率 {_percent(policy['noul']['coverage'])}"
-            if language == "zh"
-            else f"{_percent(policy['noul']['accuracy'])} at "
-            f"{_percent(policy['noul']['coverage'])} coverage"
-        )
         rows.append(
             f"| Vision-Jev-{group} | {_percent(tasks['choice']['accuracy'])} | "
-            f"{_percent(tasks['noul']['accuracy'])} | {_percent(tasks['score']['accuracy'])} | "
-            f"{choice_policy} | {noul_policy} |"
+            f"{_percent(tasks['noul']['accuracy'])} | {_percent(tasks['score']['accuracy'])} |"
         )
     return groups, rows
 
@@ -179,15 +164,24 @@ def _calibration_lines(
                 f"{_percent(metric['accuracy'])} | {float(metric['nll']):.3f} | "
                 f"{float(metric['brier']):.3f} | {float(metric['ece_15']):.3f} | N/A | N/A |"
             )
-    lines.extend(["", "#### " + ("阈值策略" if language == "zh" else "Threshold policy"), ""])
-    lines.extend(
-        [
-            "| 模型 | 任务 | 阈值 | 覆盖率 | 接受准确率 |"
-            if language == "zh"
-            else "| Model | Task | Threshold | Coverage | Accepted accuracy |",
-            "| --- | --- | ---: | ---: | ---: |",
-        ]
-    )
+    lines.append("")
+    return lines
+
+
+def _threshold_lines(
+    config: ShowcaseConfig,
+    report: dict[str, Any],
+    groups: list[str],
+    language: Language,
+) -> list[str]:
+    lines = [
+        "### 阈值策略" if language == "zh" else "### Accepted-set calibration",
+        "",
+        "| 模型 | 任务 | 阈值 | 覆盖率 | 接受准确率 |"
+        if language == "zh"
+        else "| Model | Task | Threshold | Coverage | Accepted accuracy |",
+        "| --- | --- | ---: | ---: | ---: |",
+    ]
     for group in groups:
         label = _model_label(config, group, "trained")
         policy = report["models"][group]["summary"]["threshold_policy"]
@@ -291,7 +285,10 @@ def _timing_lines(
     lines.extend(
         [
             "",
-            "#### " + ("分任务耗时" if language == "zh" else "Timing by task"),
+            "<details>",
+            "<summary><strong>分任务耗时</strong></summary>"
+            if language == "zh"
+            else "<summary><strong>Timing by task</strong></summary>",
             "",
             "| 模型 | 任务 | 样本 | 均值 (ms) | P50 | P95 | P99 | 最小 | 最大 |"
             if language == "zh"
@@ -318,7 +315,7 @@ def _timing_lines(
                         f"{float(latency['max_ms']):.1f}"
                     )
                 lines.append(f"| {_model_label(config, group, role)} | {task.title()} | {values} |")
-    lines.append("")
+    lines.extend(["", "</details>", ""])
     return lines
 
 
@@ -329,15 +326,16 @@ def _source_lines(
     language: Language,
 ) -> list[str]:
     title = (
-        f"### {group} 分数据集与任务结果"
+        f"{group} 分数据集与任务结果"
         if language == "zh"
-        else f"### {group} results by dataset and task"
+        else f"{group} results by dataset and task"
     )
     baseline_label = _model_label(config, group, "baseline")
     sft_label = _model_label(config, group, "sft")
     trained_label = _model_label(config, group, "trained")
     lines = [
-        title,
+        "<details>",
+        f"<summary><strong>{title}</strong></summary>",
         "",
         (
             "每个结果单元格依次为准确率 / 单样本平均耗时。"
@@ -345,20 +343,28 @@ def _source_lines(
             else "Each result cell reports accuracy / mean per-sample latency."
         ),
         "",
-        f"| {'数据集' if language == 'zh' else 'Dataset'} | "
-        f"{'任务' if language == 'zh' else 'Task'} | "
-        f"{'题数' if language == 'zh' else 'Questions'} | {baseline_label} | "
-        f"{sft_label} | {trained_label} |",
-        "| --- | --- | ---: | ---: | ---: | ---: |",
     ]
     trained_sources = report["models"][group]["by_source"]
     baseline_sources = report["baselines"][group]["summary"]["by_source"]
     sft_sources = report["sft_models"][group]["summary"]["by_source"]
-    for source, tasks in sorted(trained_sources.items()):
-        for task in TASKS:
-            if task not in tasks:
-                continue
-            trained_metric = tasks[task]
+    for task in TASKS:
+        task_sources = [
+            source for source, tasks in sorted(trained_sources.items()) if task in tasks
+        ]
+        if not task_sources:
+            continue
+        lines.extend(
+            [
+                f"#### {task.title()}",
+                "",
+                f"| {'数据集' if language == 'zh' else 'Dataset'} | "
+                f"{'题数' if language == 'zh' else 'Questions'} | {baseline_label} | "
+                f"{sft_label} | {trained_label} |",
+                "| --- | ---: | ---: | ---: | ---: |",
+            ]
+        )
+        for source in task_sources:
+            trained_metric = trained_sources[source][task]
             baseline_metric = baseline_sources[source]["by_task"][task]
             sft_metric = sft_sources[source]["by_task"][task]
             questions = int(trained_metric["questions"])
@@ -367,12 +373,13 @@ def _source_lines(
             ):
                 raise ValueError(f"source/task question mismatch for {group} {source} {task}")
             lines.append(
-                f"| {SOURCE_LABELS.get(source, source)} | {task.title()} | {questions:,} | "
+                f"| {SOURCE_LABELS.get(source, source)} | {questions:,} | "
                 f"{_accuracy_latency(baseline_metric)} | "
                 f"{_accuracy_latency(sft_metric)} | "
                 f"{_accuracy_latency(trained_metric)} |"
             )
-    lines.append("")
+        lines.append("")
+    lines.extend(["</details>", ""])
     return lines
 
 
@@ -395,6 +402,66 @@ def _showcase_images(
                 "",
                 f'<p align="center"><img src="{asset_href.rstrip("/")}/{filename}" '
                 f'alt="{alt}" width="900"></p>',
+                "",
+            ]
+        )
+    return lines
+
+
+def _showcase_section(
+    config: ShowcaseConfig,
+    groups: list[str],
+    asset_root: Path,
+    asset_href: str,
+    language: Language,
+) -> list[str]:
+    if language == "zh":
+        description = (
+            "每段动画都让原始 Qwen3.5 checkpoint 与 Vision-Jev 使用同一个冻结测试样本和"
+            "候选集。类别预先确定; 每个类别选择两套 Vision-Jev checkpoint 都回答正确、"
+            "通过既定置信阈值且样本 ID 的 SHA-256 最小的样本, 选择过程不使用基线预测。"
+            "每张 GIF 会依次播放全部固定样例; 两条进度条按照预热后 3 次推理耗时的中位数"
+            "推进, 并在对应模型完成时显示答案。"
+        )
+        capabilities = "、".join(
+            ZH_CAPABILITIES.get(item.id, item.title) for item in config.examples
+        )
+        lines = ["## 冻结测试集展示", "", description, "", f"覆盖能力: {capabilities}。", ""]
+    else:
+        description = (
+            "Each animation uses one identical frozen test sample and candidate set for the "
+            "original Qwen3.5 checkpoint and Vision-Jev. Categories were declared first. "
+            "Within each category, the sample is the minimum SHA-256 sample ID for which both "
+            "Vision-Jev checkpoints are correct and pass their already-frozen confidence "
+            "threshold; baseline predictions were not used for selection. Each GIF cycles "
+            "through every configured example. The two progress bars advance on the measured "
+            "median of three post-warmup inference runs, then reveal each model's answer."
+        )
+        capabilities = ", ".join(example.title for example in config.examples)
+        lines = [
+            "## Frozen test showcase",
+            "",
+            description,
+            "",
+            f"Included capabilities: {capabilities}.",
+            "",
+        ]
+    lines.extend(_showcase_images(groups, asset_root, asset_href, language))
+    return lines
+
+
+def _aggregate_lines(groups: list[str], rows: list[str], language: Language) -> list[str]:
+    lines: list[str] = []
+    for index, group in enumerate(groups):
+        lines.extend(
+            [
+                f"### {group} {'汇总' if language == 'zh' else 'summary'}",
+                "",
+                "| 模型 | Choice | Noul | Score |"
+                if language == "zh"
+                else "| Model | Choice | Noul | Score |",
+                "| --- | ---: | ---: | ---: |",
+                *rows[index * 3 : index * 3 + 3],
                 "",
             ]
         )
@@ -425,45 +492,30 @@ def _fragment_en(
     asset_root: Path,
     asset_href: str,
 ) -> str:
-    lines = [
+    lines = _showcase_section(config, groups, asset_root, asset_href, "en")
+    lines.extend(
+        [
         "## Static RLCD results",
         "",
         "Original Qwen, the completed SFT-only checkpoint, and Vision-Jev with its static "
         "RLCD decision heads are evaluated on the same complete frozen 12,000-question test "
         "split. These aggregate results include every success and failure, so raw-accuracy "
         "regressions between stages remain visible. Original Qwen and SFT-only generation do "
-        "not provide calibrated decision-head probabilities, so their threshold columns are "
-        "N/A.",
+        "not provide calibrated decision-head probabilities, so accepted-set calibration is "
+        "reported only for Vision-Jev.",
         "",
-        "| Model | Choice accuracy | Noul accuracy | Score accuracy | "
-        "Choice accepted accuracy | Noul accepted accuracy |",
-        "| --- | ---: | ---: | ---: | ---: | ---: |",
-    ]
-    lines.extend(rows)
-    lines.append("")
-    lines.extend(_validity_lines(config, report, groups, "en"))
-    lines.extend(_calibration_lines(config, report, groups, "en"))
-    lines.extend(_high_confidence_lines(config, report, groups, "en"))
-    lines.extend(_timing_lines(config, report, groups, "en"))
-    for group in groups:
-        lines.extend(_source_lines(config, report, group, "en"))
-    lines.extend(
-        [
-            "## Frozen test showcase",
-            "",
-            "Each animation uses one identical frozen test sample and candidate set for the "
-            "original Qwen3.5 checkpoint and Vision-Jev. Categories were declared first. "
-            "Within each category, the sample is the minimum SHA-256 sample ID for which both "
-            "Vision-Jev checkpoints are correct and pass their already-frozen confidence "
-            "threshold; baseline predictions were not used for selection. Each GIF cycles "
-            "through every configured example. The two progress bars advance on the measured "
-            "median of three post-warmup inference runs, then reveal each model's answer.",
-            "",
         ]
     )
-    capabilities = ", ".join(example.title for example in config.examples)
-    lines.extend([f"Included capabilities: {capabilities}.", ""])
-    lines.extend(_showcase_images(groups, asset_root, asset_href, "en"))
+    lines.extend(_aggregate_lines(groups, rows, "en"))
+    lines.extend(_threshold_lines(config, report, groups, "en"))
+    lines.extend(_high_confidence_lines(config, report, groups, "en"))
+    lines.extend(_timing_lines(config, report, groups, "en"))
+    lines.extend(["<details>", "<summary><strong>Calibration details</strong></summary>", ""])
+    lines.extend(_validity_lines(config, report, groups, "en"))
+    lines.extend(_calibration_lines(config, report, groups, "en"))
+    lines.extend(["</details>", ""])
+    for group in groups:
+        lines.extend(_source_lines(config, report, group, "en"))
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -475,44 +527,30 @@ def _fragment_zh(
     asset_root: Path,
     asset_href: str,
 ) -> str:
-    lines = [
+    lines = _showcase_section(config, groups, asset_root, asset_href, "zh")
+    lines.extend(
+        [
         "## 静态 RLCD 结果",
         "",
         (
             "原始 Qwen、完成 SFT 但未接入静态 RLCD 决策头的 checkpoint, 以及完整 "
             "Vision-Jev 均在同一份冻结的 12,000 题测试集上评测。以下汇总保留全部成功与"
             "失败样本, 因此不同阶段的原始准确率回退也会直接展示。原始 Qwen 与 SFT-only "
-            "生成不提供校准决策头概率, 因此阈值结果记为 N/A。"
+            "生成不提供校准决策头概率, 因此接受集校准只对 Vision-Jev 报告。"
         ),
         "",
-        "| 模型 | Choice 准确率 | Noul 准确率 | Score 准确率 | Choice 阈值结果 | Noul 阈值结果 |",
-        "| --- | ---: | ---: | ---: | ---: | ---: |",
-        *rows,
-        "",
-    ]
-    lines.extend(_validity_lines(config, report, groups, "zh"))
-    lines.extend(_calibration_lines(config, report, groups, "zh"))
-    lines.extend(_high_confidence_lines(config, report, groups, "zh"))
-    lines.extend(_timing_lines(config, report, groups, "zh"))
-    for group in groups:
-        lines.extend(_source_lines(config, report, group, "zh"))
-    lines.extend(
-        [
-            "## 冻结测试集展示",
-            "",
-            (
-                "每段动画都让原始 Qwen3.5 checkpoint 与 Vision-Jev 使用同一个冻结测试样本和"
-                "候选集。类别预先确定; 每个类别选择两套 Vision-Jev checkpoint 都回答正确、"
-                "通过既定置信阈值且样本 ID 的 SHA-256 最小的样本, 选择过程不使用基线预测。"
-                "每张 GIF 会依次播放全部固定样例; 两条进度条按照预热后 3 次推理耗时的中位数"
-                "推进, 并在对应模型完成时显示答案。"
-            ),
-            "",
         ]
     )
-    capabilities = "、".join(ZH_CAPABILITIES.get(item.id, item.title) for item in config.examples)
-    lines.extend([f"覆盖能力: {capabilities}。", ""])
-    lines.extend(_showcase_images(groups, asset_root, asset_href, "zh"))
+    lines.extend(_aggregate_lines(groups, rows, "zh"))
+    lines.extend(_threshold_lines(config, report, groups, "zh"))
+    lines.extend(_high_confidence_lines(config, report, groups, "zh"))
+    lines.extend(_timing_lines(config, report, groups, "zh"))
+    lines.extend(["<details>", "<summary><strong>校准详细指标</strong></summary>", ""])
+    lines.extend(_validity_lines(config, report, groups, "zh"))
+    lines.extend(_calibration_lines(config, report, groups, "zh"))
+    lines.extend(["</details>", ""])
+    for group in groups:
+        lines.extend(_source_lines(config, report, group, "zh"))
     return "\n".join(lines).rstrip() + "\n"
 
 
