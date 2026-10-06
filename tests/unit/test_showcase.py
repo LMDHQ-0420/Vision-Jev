@@ -8,7 +8,7 @@ from PIL import Image
 
 from showcase.models import Prediction, _normalize_generated
 from showcase.readme import END_MARKER, START_MARKER, publish_readme
-from showcase.render import render_static_comparison, render_static_suite
+from showcase.render import _option_label, render_static_comparison, render_static_suite
 from showcase.schema import ModelSpec, ShowcaseConfig, StaticExample
 from showcase.static import is_correct, record_prediction, selected_sample
 
@@ -113,6 +113,18 @@ def test_generated_values_are_task_normalized() -> None:
     assert _normalize_generated("noul", True, sample) is True
     assert _normalize_generated("score", 4, sample) == "score_4"
     assert is_correct("a", {"target": ["a", "b"]})
+
+
+def test_choice_labels_hide_internal_option_ids() -> None:
+    sample = {
+        "options": [
+            {"id": "choice_1", "text": "Solution B"},
+            {"id": "choice_0", "text": "Neither"},
+        ]
+    }
+    assert _option_label(sample, "choice_1", "choice") == "A. Solution B"
+    assert _option_label(sample, "choice_0", "choice") == "B. Neither"
+    assert _option_label(sample, "choice_1", "score") == "Solution B"
 
 
 def test_record_prediction_uses_repeatable_median_latency(tmp_path: Path) -> None:

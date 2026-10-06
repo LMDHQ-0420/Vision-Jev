@@ -80,11 +80,50 @@ def _text_block(
     return y
 
 
-def _option_label(sample: dict[str, Any], value: Any) -> str:
+def _option_label(sample: dict[str, Any], value: Any, task_type: str) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
-    lookup = {str(item["id"]): str(item["text"]) for item in sample["options"]}
-    return lookup.get(str(value), str(value))
+    for index, item in enumerate(sample["options"]):
+        if str(item["id"]) != str(value):
+            continue
+        text = str(item["text"])
+        if task_type == "choice":
+            return f"{chr(ord('A') + index)}. {text}"
+        return text
+    return str(value)
+
+
+def _draw_choice_option(
+    draw: ImageDraw.ImageDraw,
+    *,
+    x: int,
+    y: int,
+    index: int,
+    text: str,
+) -> int:
+    marker = chr(ord("A") + index)
+    marker_font = _font(14, bold=True)
+    draw.ellipse((x, y, x + 25, y + 25), fill="#e4e9ed")
+    marker_box = draw.textbbox((0, 0), marker, font=marker_font)
+    marker_width = marker_box[2] - marker_box[0]
+    marker_height = marker_box[3] - marker_box[1]
+    draw.text(
+        (x + (25 - marker_width) / 2, y + (25 - marker_height) / 2 - marker_box[1]),
+        marker,
+        fill=INK,
+        font=marker_font,
+    )
+    text_end = _text_block(
+        draw,
+        text,
+        x=x + 38,
+        y=y + 2,
+        width=582,
+        font=_font(16),
+        max_lines=2,
+        spacing=3,
+    )
+    return max(y + 34, text_end + 7)
 
 
 def _draw_context(canvas: Image.Image, draw: ImageDraw.ImageDraw, record: dict[str, Any]) -> None:
@@ -123,15 +162,28 @@ def _draw_context(canvas: Image.Image, draw: ImageDraw.ImageDraw, record: dict[s
         )
         + 16
     )
+    task_type = str(example["task_type"])
     options = sample["options"]
     if options:
-        for option in options[:8]:
-            text = f"{option['id']}: {option['text']}"
-            y = (
-                _text_block(draw, text, x=x, y=y, width=620, font=_font(16), max_lines=2, spacing=3)
-                + 5
-            )
-    target = ", ".join(_option_label(sample, value) for value in sample["target"])
+        for index, option in enumerate(options[:8]):
+            if task_type == "choice":
+                y = _draw_choice_option(draw, x=x, y=y, index=index, text=str(option["text"]))
+            else:
+                text = f"{option['id']}: {option['text']}"
+                y = (
+                    _text_block(
+                        draw,
+                        text,
+                        x=x,
+                        y=y,
+                        width=620,
+                        font=_font(16),
+                        max_lines=2,
+                        spacing=3,
+                    )
+                    + 5
+                )
+    target = ", ".join(_option_label(sample, value, task_type) for value in sample["target"])
     draw.text((x, 507), f"Reference: {target}", fill=CORRECT, font=_font(17, bold=True))
 
 
@@ -145,6 +197,7 @@ def _draw_prediction_panel(
     model = record["model"]
     prediction = record["prediction"]
     sample = record["sample"]
+    task_type = str(record["example"]["task_type"])
     accent = BASELINE if model["role"] == "baseline" else TRAINED
     draw.rounded_rectangle((x, 570, x + 564, 798), 6, fill="#ffffff", outline="#d7dce0")
     draw.rectangle((x, 570, x + 564, 576), fill=accent)
@@ -168,7 +221,7 @@ def _draw_prediction_panel(
     valid = bool(prediction["valid"])
     correct = bool(prediction["correct"])
     value = prediction["value"]
-    answer = _option_label(sample, value) if valid else "invalid structured output"
+    answer = _option_label(sample, value, task_type) if valid else "No valid option"
     color = CORRECT if correct else INCORRECT
     status = "correct" if correct else "incorrect"
     draw.text((x + 16, 650), f"Answer: {answer}", fill=INK, font=_font(18, bold=True))
@@ -181,22 +234,18 @@ def _draw_prediction_panel(
     )
     probabilities = dict(prediction.get("probabilities", {}))
     if not probabilities:
-        raw = str(prediction.get("raw_output") or "")
-        _text_block(
-            draw,
-            f"Generated: {raw}",
-            x=x + 16,
-            y=714,
-            width=530,
-            font=_font(14),
-            fill=MUTED,
-            max_lines=3,
-        )
+        if not valid:
+            draw.text(
+                (x + 16, 714),
+                "The response did not select one of the listed options.",
+                fill=MUTED,
+                font=_font(14),
+            )
         return
     ordered = sorted(probabilities.items(), key=lambda item: item[1], reverse=True)[:3]
     for index, (label, probability) in enumerate(ordered):
         y = 714 + index * 27
-        display = _option_label(sample, label)
+        display = _option_label(sample, label, task_type)
         draw.text((x + 16, y), display[:28], fill=INK, font=_font(14))
         draw.rectangle((x + 230, y + 4, x + 500, y + 18), fill="#dde2e6")
         draw.rectangle(
