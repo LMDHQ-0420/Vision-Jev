@@ -134,39 +134,6 @@ def build_report(args: argparse.Namespace) -> int:
     return 0
 
 
-def readme(args: argparse.Namespace) -> int:
-    from showcase.readme import build_fragment
-
-    build_fragment(
-        _config(args),
-        args.asset_root,
-        args.test_report,
-        args.output,
-        language=args.language,
-        asset_href=args.asset_href,
-    )
-    print(args.output)
-    return 0
-
-
-def publish(args: argparse.Namespace) -> int:
-    from showcase.readme import publish_readme
-
-    config = _config(args)
-    publish_readme(config, args.asset_root, args.test_report, args.readme)
-    publish_readme(
-        config,
-        args.asset_root,
-        args.test_report,
-        args.readme_zh,
-        language="zh",
-        asset_href="../asset/demos",
-    )
-    print(args.readme)
-    print(args.readme_zh)
-    return 0
-
-
 def run_all(args: argparse.Namespace) -> int:
     from showcase.models import load_adapter
     from showcase.render import render_static_suite
@@ -288,27 +255,6 @@ def parser() -> argparse.ArgumentParser:
         "--output", type=Path, default=Path("showcase/output/static-test-results.json")
     )
     report_parser.set_defaults(func=build_report)
-
-    readme_parser = commands.add_parser("readme")
-    readme_parser.add_argument("--asset-root", type=Path, default=Path("asset/demos"))
-    readme_parser.add_argument(
-        "--test-report", type=Path, default=Path("showcase/output/static-test-results.json")
-    )
-    readme_parser.add_argument(
-        "--output", type=Path, default=Path("showcase/output/README-demos.md")
-    )
-    readme_parser.add_argument("--language", choices=("en", "zh"), default="en")
-    readme_parser.add_argument("--asset-href")
-    readme_parser.set_defaults(func=readme)
-
-    publish_parser = commands.add_parser("publish-readme")
-    publish_parser.add_argument("--asset-root", type=Path, default=Path("asset/demos"))
-    publish_parser.add_argument(
-        "--test-report", type=Path, default=Path("showcase/output/static-test-results.json")
-    )
-    publish_parser.add_argument("--readme", type=Path, default=Path("README.md"))
-    publish_parser.add_argument("--readme-zh", type=Path, default=Path("docs/overview-zh.md"))
-    publish_parser.set_defaults(func=publish)
 
     all_parser = commands.add_parser("run-all")
     all_parser.add_argument("--example", action="append")

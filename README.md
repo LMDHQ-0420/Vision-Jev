@@ -45,7 +45,6 @@ The mixture covers GUI actions, region grounding, compositional reasoning, VQA, 
 - [Machine-readable sources](configs/data/sources.json)
 - [Training recipe](configs/data/sft_117k.json)
 
-<!-- showcase:start -->
 ## Frozen test showcase
 
 Each animation uses one identical frozen test sample and candidate set for the original Qwen3.5 checkpoint and Vision-Jev. Categories were declared first. Within each category, the sample is the minimum SHA-256 sample ID for which both Vision-Jev checkpoints are correct and pass their already-frozen confidence threshold; baseline predictions were not used for selection. Each GIF cycles through every configured example. The two progress bars advance on the measured median of three post-warmup inference runs, then reveal each model's answer.
@@ -247,7 +246,6 @@ Each result cell reports accuracy / mean per-sample latency.
 | KonIQ-10k | 1,200 | 32.9% / 315.7 ms | 60.5% / 368.3 ms | 62.1% / 153.9 ms |
 
 </details>
-<!-- showcase:end -->
 
 ## Quick start
 
