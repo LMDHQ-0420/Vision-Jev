@@ -51,6 +51,14 @@ The public-only Qwen3.5-0.8B SFT and static RLCD-inspired runs are complete. The
 pipeline is now being reproduced on the official Qwen3.5-9B checkpoint; Qwen does not
 publish a Qwen3.5-7B checkpoint.
 
+<!-- showcase:start -->
+## Interactive comparisons
+
+The reproducible side-by-side demo pipeline is implemented in [`showcase/`](showcase/README.md).
+Reviewed animations will be published here after both parameter groups finish the same
+fixed-seed episodes.
+<!-- showcase:end -->
+
 ## Quick start
 
 ```bash
@@ -83,6 +91,7 @@ Every JSONL row is one complete question; candidates are never expanded into fak
 
 ```text
 asset/              Brand assets
+showcase/           Reproducible side-by-side model demos
 configs/            Data, model, training, and evaluation templates
 data/               Schemas, public examples, and source metadata
 docs/               Architecture, data, training, evaluation, and release guides

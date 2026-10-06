@@ -33,3 +33,5 @@ runs/*
 !.env.example
 configs/local/
 secrets/
+showcase/configs/models.local.json
+showcase/output/

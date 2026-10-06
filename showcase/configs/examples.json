@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "frame_duration_ms": 700,
+  "examples": [
+    {
+      "id": "fourrooms-navigation",
+      "title": "FourRooms navigation",
+      "description": "Long-horizon navigation across rooms with repeated local choices.",
+      "environment": {
+        "family": "minigrid",
+        "environment_id": "MiniGrid-FourRooms-v0",
+        "seed": 910001,
+        "max_steps": 64,
+        "actions": ["turn_left", "turn_right", "move_forward", "toggle"]
+      }
+    },
+    {
+      "id": "doorkey-tool-use",
+      "title": "DoorKey tool use",
+      "description": "The agent must acquire a key, open the matching door, and then reach the goal.",
+      "environment": {
+        "family": "minigrid",
+        "environment_id": "MiniGrid-DoorKey-8x8-v0",
+        "seed": 910002,
+        "max_steps": 96,
+        "actions": ["turn_left", "turn_right", "move_forward", "pickup", "drop", "toggle", "done"]
+      }
+    },
+    {
+      "id": "lava-risk",
+      "title": "LavaCrossing risk avoidance",
+      "description": "A shortest safe route must be followed without stepping into lava.",
+      "environment": {
+        "family": "minigrid",
+        "environment_id": "MiniGrid-LavaCrossingS11N5-v0",
+        "seed": 910003,
+        "max_steps": 96,
+        "actions": ["turn_left", "turn_right", "move_forward"]
+      }
+    },
+    {
+      "id": "dynamic-obstacles",
+      "title": "Dynamic obstacle avoidance",
+      "description": "The route changes as moving obstacles alter the immediate collision risk.",
+      "environment": {
+        "family": "minigrid",
+        "environment_id": "MiniGrid-Dynamic-Obstacles-8x8-v0",
+        "seed": 910004,
+        "max_steps": 96,
+        "actions": ["turn_left", "turn_right", "move_forward"]
+      }
+    },
+    {
+      "id": "babyai-language",
+      "title": "BabyAI language grounding",
+      "description": "The policy must ground a natural-language instruction into a sequence of actions.",
+      "environment": {
+        "family": "minigrid",
+        "environment_id": "BabyAI-OpenDoorLoc-v0",
+        "seed": 910005,
+        "max_steps": 96,
+        "actions": ["turn_left", "turn_right", "move_forward", "pickup", "drop", "toggle", "done"]
+      }
+    }
+  ]
+}

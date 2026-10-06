@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "models": [
+    {
+      "id": "qwen35-08b-base",
+      "label": "Qwen3.5-0.8B",
+      "parameter_group": "0.8B",
+      "role": "baseline",
+      "kind": "qwen_base",
+      "model_config": "configs/model/qwen35_08b.json"
+    },
+    {
+      "id": "vision-jev-08b",
+      "label": "Vision-Jev-0.8B",
+      "parameter_group": "0.8B",
+      "role": "trained",
+      "kind": "vision_jev_rlcd",
+      "model_config": "configs/model/qwen35_08b.json",
+      "sft_checkpoint": "${DATA_ROOT}/runs/qwen35-08b-sft-main-117k/checkpoint-last",
+      "rlcd_config": "configs/train/rlcd_main.json",
+      "rlcd_checkpoint": "${DATA_ROOT}/runs/qwen35-08b-rlcd-main-72k/checkpoint-last"
+    },
+    {
+      "id": "qwen35-9b-base",
+      "label": "Qwen3.5-9B",
+      "parameter_group": "9B",
+      "role": "baseline",
+      "kind": "qwen_base",
+      "model_config": "configs/model/qwen35_9b.json"
+    },
+    {
+      "id": "vision-jev-9b",
+      "label": "Vision-Jev-9B",
+      "parameter_group": "9B",
+      "role": "trained",
+      "kind": "vision_jev_rlcd",
+      "model_config": "configs/model/qwen35_9b.json",
+      "sft_checkpoint": "${DATA_ROOT}/runs/qwen35-9b-sft-main-117k/checkpoint-last",
+      "rlcd_config": "configs/train/rlcd_main_9b.json",
+      "rlcd_checkpoint": "${DATA_ROOT}/runs/qwen35-9b-rlcd-main-72k/checkpoint-last"
+    }
+  ]
+}
