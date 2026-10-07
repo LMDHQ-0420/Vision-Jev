@@ -28,6 +28,45 @@ Vision-Jev 将视觉理解引入 JEV-like 模型范式，并完整开放从数�
 
 项目将开放数据处理、精确配额、固定来源、确定性 manifest、SFT 与策略训练代码、评测协议、实验结果、模型权重、模型卡和数据卡。第三方原始数据继续遵守各自许可；本项目公开可复现的处理路径，不把上游资产声明为自有数据。
 
+## 模型权重
+
+最终 0.8B 和 9B 模型已发布到 Hugging Face：[LMDHQ-0420/vision-jev](https://huggingface.co/LMDHQ-0420/vision-jev)。每个版本都包含最终 SFT LoRA 适配器、静态 Choice/Noul/Score 决策头、冻结校准温度，以及对应的 tokenizer 和 processor 配置。
+
+| 发布版本 | 基础模型 | Hugging Face 文件 |
+| --- | --- | --- |
+| Vision-Jev-0.8B | `Qwen/Qwen3.5-0.8B` | [`vision-jev-0.8b/`](https://huggingface.co/LMDHQ-0420/vision-jev/tree/main/vision-jev-0.8b) |
+| Vision-Jev-9B | `Qwen/Qwen3.5-9B` | [`vision-jev-9b/`](https://huggingface.co/LMDHQ-0420/vision-jev/tree/main/vision-jev-9b) |
+
+发布内容采用 PEFT 适配器加项目决策头的形式，不重复上传合并后的 Qwen 权重，因此还需要对应的 Qwen3.5 基础模型。
+
+安装 Hugging Face CLI，然后下载指定版本及完整测试报告：
+
+```bash
+python -m pip install -U huggingface_hub
+
+# 0.8B
+hf download LMDHQ-0420/vision-jev \
+  vision-jev-0.8b/ results/static-rlcd-test.json \
+  --revision b42c2f29eb6572f4a2ee31bd99d85d45ae8510c7 \
+  --local-dir ./models/vision-jev
+
+# 9B
+hf download LMDHQ-0420/vision-jev \
+  vision-jev-9b/ results/static-rlcd-test.json \
+  --revision b42c2f29eb6572f4a2ee31bd99d85d45ae8510c7 \
+  --local-dir ./models/vision-jev
+```
+
+一次下载两个模型、模型卡、许可证和测试结果：
+
+```bash
+hf download LMDHQ-0420/vision-jev \
+  --revision b42c2f29eb6572f4a2ee31bd99d85d45ae8510c7 \
+  --local-dir ./models/vision-jev
+```
+
+[Hugging Face 模型卡](https://huggingface.co/LMDHQ-0420/vision-jev)提供发布目录和 PEFT 加载方式说明。
+
 ## 冻结测试集展示
 
 每段动画都让原始 Qwen3.5 checkpoint 与 Vision-Jev 使用同一个冻结测试样本和候选集。类别预先确定; 每个类别选择两套 Vision-Jev checkpoint 都回答正确、通过既定置信阈值且样本 ID 的 SHA-256 最小的样本, 选择过程不使用基线预测。每张 GIF 会依次播放全部固定样例; 两条进度条按照预热后 3 次推理耗时的中位数推进, 并在对应模型完成时显示答案。

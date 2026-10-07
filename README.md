@@ -28,6 +28,45 @@ Vision-Jev brings visual understanding to the JEV-like modeling paradigm and is 
 
 The project will publish the data pipeline, exact quotas, source revisions, deterministic manifests, SFT and policy-training code, evaluation protocol, experiment evidence, model weights, and release cards. Third-party datasets retain their original licenses; this repository publishes the source ledger and reproducible processing path rather than claiming ownership of upstream assets.
 
+## Model weights
+
+The final 0.8B and 9B releases are available from [LMDHQ-0420/vision-jev on Hugging Face](https://huggingface.co/LMDHQ-0420/vision-jev). Each release contains the final SFT LoRA adapter, static Choice/Noul/Score decision heads, frozen calibration temperatures, and the matching tokenizer and processor configuration.
+
+| Release | Base model | Hugging Face files |
+| --- | --- | --- |
+| Vision-Jev-0.8B | `Qwen/Qwen3.5-0.8B` | [`vision-jev-0.8b/`](https://huggingface.co/LMDHQ-0420/vision-jev/tree/main/vision-jev-0.8b) |
+| Vision-Jev-9B | `Qwen/Qwen3.5-9B` | [`vision-jev-9b/`](https://huggingface.co/LMDHQ-0420/vision-jev/tree/main/vision-jev-9b) |
+
+These are PEFT adapters plus project-specific decision heads, not duplicated merged Qwen weights. The corresponding Qwen3.5 base model is therefore also required.
+
+Install the Hugging Face CLI, then download one release and its test report:
+
+```bash
+python -m pip install -U huggingface_hub
+
+# 0.8B
+hf download LMDHQ-0420/vision-jev \
+  vision-jev-0.8b/ results/static-rlcd-test.json \
+  --revision b42c2f29eb6572f4a2ee31bd99d85d45ae8510c7 \
+  --local-dir ./models/vision-jev
+
+# 9B
+hf download LMDHQ-0420/vision-jev \
+  vision-jev-9b/ results/static-rlcd-test.json \
+  --revision b42c2f29eb6572f4a2ee31bd99d85d45ae8510c7 \
+  --local-dir ./models/vision-jev
+```
+
+Download both releases, the model card, license, and results in one command:
+
+```bash
+hf download LMDHQ-0420/vision-jev \
+  --revision b42c2f29eb6572f4a2ee31bd99d85d45ae8510c7 \
+  --local-dir ./models/vision-jev
+```
+
+The [Hugging Face model card](https://huggingface.co/LMDHQ-0420/vision-jev) documents the release layout and PEFT loading path.
+
 ## Frozen test showcase
 
 Each animation uses one identical frozen test sample and candidate set for the original Qwen3.5 checkpoint and Vision-Jev. Categories were declared first. Within each category, the sample is the minimum SHA-256 sample ID for which both Vision-Jev checkpoints are correct and pass their already-frozen confidence threshold; baseline predictions were not used for selection. Each GIF cycles through every configured example. The two progress bars advance on the measured median of three post-warmup inference runs, then reveal each model's answer.
