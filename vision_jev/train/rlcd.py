@@ -48,11 +48,7 @@ class RlcdDataset(Dataset[dict[str, Any]]):
                     row = json.loads(raw)
                     if row.get("decision_role") == role:
                         rows.append(row)
-        rows.sort(
-            key=lambda row: hashlib.sha256(
-                f"{seed}\0{row['sample_id']}".encode()
-            ).digest()
-        )
+        rows.sort(key=lambda row: hashlib.sha256(f"{seed}\0{row['sample_id']}".encode()).digest())
         self.rows = rows[:maximum] if maximum is not None else rows
         if not self.rows:
             raise ValueError(f"manifest contains no RLCD rows for role={role!r}")
@@ -451,9 +447,7 @@ def select_confidence_thresholds(
     return result
 
 
-def _threshold_report(
-    records: list[dict[str, Any]], thresholds: dict[str, Any]
-) -> dict[str, Any]:
+def _threshold_report(records: list[dict[str, Any]], thresholds: dict[str, Any]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for task in TASKS:
         rows = [row for row in records if row["task_type"] == task]
@@ -465,9 +459,7 @@ def _threshold_report(
             "accepted": len(accepted),
             "coverage": len(accepted) / len(rows) if rows else 0.0,
             "accuracy": (
-                sum(bool(row["correct"]) for row in accepted) / len(accepted)
-                if accepted
-                else None
+                sum(bool(row["correct"]) for row in accepted) / len(accepted) if accepted else None
             ),
         }
     return result
@@ -542,9 +534,7 @@ def evaluate_rlcd_checkpoint(
     heads.eval()
     temperatures = json.loads((checkpoint / "temperatures.json").read_text(encoding="utf-8"))
     manifest = role_manifest or Path(config["role_manifest"])
-    dataset = RlcdDataset(
-        manifest, role, seed=int(config.get("seed", 43)), maximum=maximum
-    )
+    dataset = RlcdDataset(manifest, role, seed=int(config.get("seed", 43)), maximum=maximum)
     extractor = FeatureExtractor(backbone, processor, config, device)
     warmup = dataset[0]
     warmup_task = str(warmup["task_type"])
@@ -655,9 +645,7 @@ def evaluate_rlcd_checkpoint(
     if thresholds_path is not None:
         thresholds = json.loads(thresholds_path.read_text(encoding="utf-8"))
         report["threshold_policy"] = _threshold_report(records, thresholds)
-        report["threshold_policy_by_source"] = _source_threshold_reports(
-            records, thresholds
-        )
+        report["threshold_policy_by_source"] = _source_threshold_reports(records, thresholds)
     if select_thresholds_path is not None:
         if role != "threshold":
             raise ValueError("confidence thresholds may only be selected on the threshold role")
@@ -747,14 +735,10 @@ def train_rlcd(
         generator=torch.Generator().manual_seed(seed),
     )
     dev_loader = DataLoader(dev_preview, batch_size=1, collate_fn=_one_row)
-    updates_per_epoch = math.ceil(
-        len(train_data) / int(config["global_batch_questions"])
-    )
+    updates_per_epoch = math.ceil(len(train_data) / int(config["global_batch_questions"]))
     total_steps = int(config.get("max_steps") or updates_per_epoch * int(config["epochs"]))
     scheduler_steps = total_steps * accelerator.num_processes
-    warmup_steps = max(
-        1, round(scheduler_steps * float(config.get("warmup_ratio", 0.03)))
-    )
+    warmup_steps = max(1, round(scheduler_steps * float(config.get("warmup_ratio", 0.03))))
     scheduler = get_linear_schedule_with_warmup(optimizer, warmup_steps, scheduler_steps)
     heads, optimizer, train_loader, dev_loader, scheduler = accelerator.prepare(
         heads, optimizer, train_loader, dev_loader, scheduler
@@ -842,9 +826,7 @@ def train_rlcd(
         seed=seed,
         maximum=config.get("dev_maximum"),
     )
-    full_dev_loader = accelerator.prepare(
-        DataLoader(full_dev, batch_size=1, collate_fn=_one_row)
-    )
+    full_dev_loader = accelerator.prepare(DataLoader(full_dev, batch_size=1, collate_fn=_one_row))
     dev_report = evaluate_heads(heads, extractor, full_dev_loader, accelerator)
     _save_heads(
         output_dir / "checkpoint-last",

@@ -36,7 +36,7 @@
 
 ## 下载状态口径
 
-- 数据根目录固定为 `/mnt/sda1/sol_data/vision-jev`，原始数据永不提交 Git。
+- 默认数据根目录为 `/data/vision-jev`，也可通过下载脚本的 `--data-root` 指定；原始数据永不提交 Git。
 - HTTP 文件先写 `.part`，同时验证响应长度、目录中固定的精确字节数和 ZIP 结构；坏包移到带时间戳的 `.invalid-*`，不直接删除。
 - Hugging Face 来源固定 commit revision；AndroidControl 当前使用固定 revision 的原始 TFRecord 镜像，并要求发布前与官方 GCS 清单/哈希交叉核验。
 - WebLINX 不下载全量 659,934 文件：固定 train CSV 后确定性抽样，只物化入选 turn 的 replay/截图。按项目所有者决定信任上游开源发布的完整内容，不增加 OCR、文本 PII 过滤或发布阻断。

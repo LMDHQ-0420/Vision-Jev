@@ -35,9 +35,7 @@ def _rank(stage: str, sample_id: str) -> bytes:
     return hashlib.sha256(f"interactive-finalize-v1\0{stage}\0{sample_id}".encode()).digest()
 
 
-def _choice_matrix(
-    rows_by_stage: dict[str, list[dict[str, Any]]]
-) -> dict[tuple[str, str], int]:
+def _choice_matrix(rows_by_stage: dict[str, list[dict[str, Any]]]) -> dict[tuple[str, str], int]:
     fixed_stage = "minigrid_dynamic_obstacles"
     fixed_counts = Counter(str(row["decision_role"]) for row in rows_by_stage[fixed_stage])
     stages = [stage for stage in STAGE_TARGETS if stage != fixed_stage]
@@ -145,9 +143,7 @@ def _render_task(row: dict[str, Any], *, task: str, ordinal: int) -> None:
     if not negatives:
         raise ValueError(f"Noul row has no negative action: {row['sample_id']}")
     candidate = (
-        optimal[ordinal % len(optimal)]
-        if ordinal % 2 == 0
-        else negatives[ordinal % len(negatives)]
+        optimal[ordinal % len(optimal)] if ordinal % 2 == 0 else negatives[ordinal % len(negatives)]
     )
     row["task_type"] = "noul"
     row["options"] = []
@@ -184,9 +180,7 @@ def finalize_interactive(
                 row
                 for row in role_rows
                 if not [
-                    action
-                    for action in _action_ids(row)
-                    if action not in _optimal_actions(row)
+                    action for action in _action_ids(row) if action not in _optimal_actions(row)
                 ]
             ]
             if len(forced_choice) > choice_count:
@@ -266,8 +260,7 @@ def finalize_interactive(
         "roles": dict(sorted(role_counts.items())),
         "tasks": dict(sorted(task_counts.items())),
         "role_tasks": {
-            role: dict(sorted(counts.items()))
-            for role, counts in sorted(role_task_counts.items())
+            role: dict(sorted(counts.items())) for role, counts in sorted(role_task_counts.items())
         },
         "exact_oracle_rows": exact_rows,
         "stochastic_policy_rows": 16000 - exact_rows,

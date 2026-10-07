@@ -362,7 +362,7 @@ python scripts/check_repo.py
 python -m unittest discover -s tests -p 'test_*.py'
 ```
 
-默认数据目录为 `/mnt/sda1/sol_data/vision-jev`：
+默认数据目录为 `/data/vision-jev`：
 
 ```bash
 vision-jev data-download
@@ -372,7 +372,7 @@ vision-jev data-download-gui-odyssey-subset --target-rows 8500
 vision-jev data-normalize visual7w
 vision-jev data-build-public \
   --mixture configs/data/sft_117k.json \
-  --output /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl
+  --output /data/vision-jev/manifests/public-117k.jsonl
 ```
 
 每行 JSONL 代表一道完整问题，不会把 K 个候选拆成 K 条虚假样本。
@@ -383,9 +383,9 @@ vision-jev data-build-public \
 asset/              项目视觉资产
 showcase/           可复现模型对比与动图生成代码
 configs/            数据、模型、训练和评测模板
-data/               Schema、公开样例和来源元数据
+data/               Schema 与公开样例
 docs/               架构、数据、训练、评测和发布文档
-runs/               不可变运行记录和外部大文件引用
+results/            已发布的机器可读评测结果
 scripts/            仓库与资源检查工具
 vision_jev/         数据、模型、运行时、训练和评测代码
 tests/              单元测试与集成测试
@@ -414,4 +414,4 @@ SFT 数据包含 **117,000 道公开来源完整问题**，本项目新增人工
 
 建议从[文档首页](docs/index.md)、[数据流程](docs/data/pipeline.md)、[SFT 教程](docs/training/sft.md)、[评测协议](docs/evaluation/protocol.md)和[发布清单](docs/release/checklist.md)开始。
 
-Vision-Jev 源代码采用 [Apache License 2.0](LICENSE)。数据资产和衍生发布可能受到上游许可的额外限制，重新分发或商用前请检查[来源账本](docs/data/sources.md)。首个模型发布时会补充正式引用信息；在此之前，请引用仓库地址和准确 Git commit。
+Vision-Jev 源代码采用 [Apache License 2.0](LICENSE)。数据资产和衍生发布可能受到上游许可的额外限制，重新分发或商用前请检查[来源账本](docs/data/sources.md)。引用时请同时注明 [Hugging Face 模型发布页](https://huggingface.co/LMDHQ-0420/vision-jev)和所用的准确 Git commit。

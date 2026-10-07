@@ -239,9 +239,7 @@ def generate_minigrid_navigation(
                 int(unwrapped.agent_dir),
                 navigation_map.initial_open_doors,
             )
-            shortest_distance, optimal_actions = _shortest_navigation(
-                navigation_map, initial_state
-            )
+            shortest_distance, optimal_actions = _shortest_navigation(navigation_map, initial_state)
             action_q: dict[str, int | None] = {}
             action_mask: dict[str, bool] = {}
             for action, action_name in ACTION_NAMES.items():

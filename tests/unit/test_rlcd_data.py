@@ -10,11 +10,15 @@ from vision_jev.data.rlcd import build_rlcd_manifest, build_rlcd_training_views
 
 def _sample(index: int, task: str, source: str, *, group: str | None = None) -> dict[str, object]:
     sample_id = f"{source}:{task}:{index}"
-    options = [] if task == "noul" else [
-        {"id": "a", "text": "A"},
-        {"id": "b", "text": "B"},
-        {"id": "c", "text": "C"},
-    ]
+    options = (
+        []
+        if task == "noul"
+        else [
+            {"id": "a", "text": "A"},
+            {"id": "b", "text": "B"},
+            {"id": "c", "text": "C"},
+        ]
+    )
     return {
         "schema_version": 2,
         "sample_id": sample_id,

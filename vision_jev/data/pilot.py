@@ -55,9 +55,10 @@ def build_training_manifest(
     task_counts: Counter[str] = Counter()
     role_task_counts: dict[str, Counter[str]] = defaultdict(Counter)
     source_counts: Counter[str] = Counter()
-    with source.open(encoding="utf-8") as input_handle, temporary.open(
-        "w", encoding="utf-8"
-    ) as output:
+    with (
+        source.open(encoding="utf-8") as input_handle,
+        temporary.open("w", encoding="utf-8") as output,
+    ):
         for raw in input_handle:
             if not raw.strip():
                 continue

@@ -62,9 +62,7 @@ def _reachable(
             if successor not in floors or successor in boxes:
                 continue
             candidate_distance = distances[current] + 1
-            candidate_first = (
-                frozenset({action}) if current == player else first_actions[current]
-            )
+            candidate_first = frozenset({action}) if current == player else first_actions[current]
             previous = distances.get(successor)
             if previous is None:
                 distances[successor] = candidate_distance
@@ -124,15 +122,11 @@ def solve_boxoban(level: dict[str, Any], *, node_limit: int = 2_000_000) -> Boxo
     initial_h = _assignment_heuristic(initial_boxes, goals, push_distances)
     heapq.heappush(heap, (initial_h, 0, next(serial), initial_player, initial_boxes))
     initial_marker = (initial_player, initial_boxes)
-    best_cost: dict[tuple[tuple[int, int], frozenset[tuple[int, int]]], int] = {
-        initial_marker: 0
+    best_cost: dict[tuple[tuple[int, int], frozenset[tuple[int, int]]], int] = {initial_marker: 0}
+    firsts_by_state: dict[tuple[tuple[int, int], frozenset[tuple[int, int]]], frozenset[str]] = {
+        initial_marker: frozenset()
     }
-    firsts_by_state: dict[
-        tuple[tuple[int, int], frozenset[tuple[int, int]]], frozenset[str]
-    ] = {initial_marker: frozenset()}
-    propagated_firsts: dict[
-        tuple[tuple[int, int], frozenset[tuple[int, int]]], frozenset[str]
-    ] = {}
+    propagated_firsts: dict[tuple[tuple[int, int], frozenset[tuple[int, int]]], frozenset[str]] = {}
     solution_cost: int | None = None
     optimal_actions: set[str] = set()
     explored = 0

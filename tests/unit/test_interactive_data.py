@@ -21,8 +21,7 @@ class InteractiveDataTests(unittest.TestCase):
             levels = root / "unfiltered" / "train"
             levels.mkdir(parents=True)
             (levels / "000.txt").write_text(
-                "; 0\n#####\n# + #\n#$* #\n#####\n\n"
-                "; 1\n#####\n# @ #\n#$. #\n#####\n",
+                "; 0\n#####\n# + #\n#$* #\n#####\n\n; 1\n#####\n# @ #\n#$. #\n#####\n",
                 encoding="utf-8",
             )
             output = data_root / "processed" / "interactive" / "boxoban-levels.jsonl"
@@ -53,9 +52,7 @@ class InteractiveDataTests(unittest.TestCase):
                 / "hard"
             )
             levels.mkdir(parents=True)
-            (levels / "000.txt").write_text(
-                "; 0\n#####\n# @ #\n# $ #\n#####\n", encoding="utf-8"
-            )
+            (levels / "000.txt").write_text("; 0\n#####\n# @ #\n# $ #\n#####\n", encoding="utf-8")
 
             with self.assertRaisesRegex(ValueError, "boxes/goals mismatch"):
                 build_boxoban_index(

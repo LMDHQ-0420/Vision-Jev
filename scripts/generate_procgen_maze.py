@@ -40,9 +40,7 @@ def _rank(seed: str, value: str) -> bytes:
 def _allocated(values: list[str], seed: str) -> list[str]:
     return [
         item[1]
-        for item in sorted(
-            enumerate(values), key=lambda item: _rank(seed, f"{item[0]}:{item[1]}")
-        )
+        for item in sorted(enumerate(values), key=lambda item: _rank(seed, f"{item[0]}:{item[1]}"))
     ]
 
 
@@ -123,10 +121,7 @@ def _safe_solve(job: tuple[int, str]) -> dict[str, Any]:
 
 
 def generate(output: Path, image_root: Path, max_workers: int) -> dict[str, Any]:
-    jobs = [
-        (500_000 + index, "easy" if index % 2 == 0 else "hard")
-        for index in range(2300)
-    ]
+    jobs = [(500_000 + index, "easy" if index % 2 == 0 else "hard") for index in range(2300)]
     accepted: list[dict[str, Any]] = []
     seen_images: set[bytes] = set()
     failures: Counter[str] = Counter()

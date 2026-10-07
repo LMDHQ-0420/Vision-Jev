@@ -23,9 +23,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--maximum", type=int, default=0, help="maximum rows; 0 evaluates the full holdout"
     )
     parser.add_argument("--progress-every", type=int, default=25)
-    parser.add_argument(
-        "--model-root", type=Path, default=Path("/data/vision-jev/models")
-    )
+    parser.add_argument("--model-root", type=Path, default=Path("/data/vision-jev/models"))
     return parser
 
 

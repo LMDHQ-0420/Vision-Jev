@@ -30,7 +30,7 @@ vision-jev data-download-gui-odyssey-subset --target-rows 8500
 vision-jev data-inventory
 vision-jev data-normalize multimodal_mind2web
 vision-jev data-build-public --mixture configs/data/sft_117k.json \
-  --output /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl
+  --output /data/vision-jev/manifests/public-117k.jsonl
 ```
 
 `data-build-public` 按固定 seed 和 `sample_id` 哈希排序，从每个 canonical train 池取得精确配额；实现使用按配额有界的 streaming heap，不把百万级来源整体载入内存。任一来源不足即写 `*.build-report.json` 并失败，不产出主 manifest；成功时记录最终 manifest SHA-256、题型和语言实测分布。

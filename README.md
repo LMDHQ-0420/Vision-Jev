@@ -362,7 +362,7 @@ python scripts/check_repo.py
 python -m unittest discover -s tests -p 'test_*.py'
 ```
 
-The default external data root is `/mnt/sda1/sol_data/vision-jev`:
+The default external data root is `/data/vision-jev`:
 
 ```bash
 vision-jev data-download
@@ -372,7 +372,7 @@ vision-jev data-download-gui-odyssey-subset --target-rows 8500
 vision-jev data-normalize visual7w
 vision-jev data-build-public \
   --mixture configs/data/sft_117k.json \
-  --output /mnt/sda1/sol_data/vision-jev/manifests/public-117k.jsonl
+  --output /data/vision-jev/manifests/public-117k.jsonl
 ```
 
 Every JSONL row is one complete question; candidates are never expanded into fake independent samples.
@@ -383,9 +383,9 @@ Every JSONL row is one complete question; candidates are never expanded into fak
 asset/              Brand assets
 showcase/           Reproducible side-by-side demo implementation
 configs/            Data, model, training, and evaluation templates
-data/               Schemas, public examples, and source metadata
+data/               Schemas and public examples
 docs/               Architecture, data, training, evaluation, and release guides
-runs/               Immutable run metadata and external artifact references
+results/            Published machine-readable evaluation results
 scripts/            Repository and resource checks
 vision_jev/         Data, model, runtime, training, and evaluation code
 tests/              Unit and integration tests
@@ -414,6 +414,4 @@ The mixture covers GUI actions, region grounding, compositional reasoning, VQA, 
 
 Start with the [documentation index](docs/index.md), [data pipeline](docs/data/pipeline.md), [SFT guide](docs/training/sft.md), [evaluation protocol](docs/evaluation/protocol.md), and [release checklist](docs/release/checklist.md).
 
-Vision-Jev source code is released under the [Apache License 2.0](LICENSE). Dataset assets and derived releases may carry additional upstream restrictions; consult the [source ledger](docs/data/sources.md) before redistribution or commercial use.
-
-Formal citation metadata will be added with the first model release. Until then, cite the repository URL and exact Git commit used.
+Vision-Jev source code is released under the [Apache License 2.0](LICENSE). Dataset assets and derived releases may carry additional upstream restrictions; consult the [source ledger](docs/data/sources.md) before redistribution or commercial use. Cite the [Hugging Face model release](https://huggingface.co/LMDHQ-0420/vision-jev) together with the exact Git commit used.

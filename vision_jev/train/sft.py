@@ -590,9 +590,7 @@ def _load_named_optimizer_state(
         raw_optimizer.state[parameter] = _to_device(state, parameter.device)
     if len(raw_optimizer.param_groups) != len(saved["param_groups"]):
         raise ValueError("optimizer parameter-group count differs from the checkpoint")
-    for current, previous in zip(
-        raw_optimizer.param_groups, saved["param_groups"], strict=True
-    ):
+    for current, previous in zip(raw_optimizer.param_groups, saved["param_groups"], strict=True):
         current_names = [names[id(parameter)] for parameter in current["params"]]
         if set(current_names) != set(previous["param_names"]):
             raise ValueError("optimizer trainable parameter names differ from the checkpoint")
@@ -688,16 +686,13 @@ def train_sft(
     # Accelerate advances a wrapped scheduler once per process for sharded batches.
     # Optimizer step counts are global; scheduler step counts include that process multiplier.
     updates_per_epoch = math.ceil(
-        len(train_loader)
-        / (int(config["gradient_accumulation_steps"]) * accelerator.num_processes)
+        len(train_loader) / (int(config["gradient_accumulation_steps"]) * accelerator.num_processes)
     )
     total_steps = int(config.get("max_steps") or updates_per_epoch * int(config["epochs"]))
     scheduler_steps = total_steps * accelerator.num_processes
     scheduler = get_linear_schedule_with_warmup(  # type: ignore[no-untyped-call]
         optimizer,
-        num_warmup_steps=max(
-            1, int(scheduler_steps * float(config.get("warmup_ratio", 0.03)))
-        ),
+        num_warmup_steps=max(1, int(scheduler_steps * float(config.get("warmup_ratio", 0.03)))),
         num_training_steps=scheduler_steps,
     )
     resume_trainer_state: dict[str, Any] | None = None
@@ -720,9 +715,7 @@ def train_sft(
     step = int(resume_trainer_state["step"]) if resume_trainer_state else 0
     first_loss = resume_trainer_state.get("first_train_loss") if resume_trainer_state else None
     start_epoch = int(resume_trainer_state["epoch"]) if resume_trainer_state else 0
-    resume_batches = (
-        int(resume_trainer_state["batches_in_epoch"]) if resume_trainer_state else 0
-    )
+    resume_batches = int(resume_trainer_state["batches_in_epoch"]) if resume_trainer_state else 0
     elapsed_offset = (
         float(resume_trainer_state.get("elapsed_seconds", 0.0)) if resume_trainer_state else 0.0
     )

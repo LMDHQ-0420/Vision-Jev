@@ -20,8 +20,23 @@ from typing import Any
 YES = {"yes", "true"}
 NO = {"no", "false"}
 COLORS = {
-    "black", "blue", "brown", "cyan", "gold", "gray", "green", "grey", "orange",
-    "pink", "purple", "red", "silver", "tan", "teal", "white", "yellow",
+    "black",
+    "blue",
+    "brown",
+    "cyan",
+    "gold",
+    "gray",
+    "green",
+    "grey",
+    "orange",
+    "pink",
+    "purple",
+    "red",
+    "silver",
+    "tan",
+    "teal",
+    "white",
+    "yellow",
 }
 
 
@@ -56,9 +71,7 @@ def _answer_kind(value: str) -> str:
     answer = normalize_answer(value)
     if answer in COLORS:
         return "color"
-    if re.fullmatch(
-        r"[$€£]?[-+]?\d[\d,.]*(?::\d+|%|\s*(?:percent|percentage))?", answer
-    ):
+    if re.fullmatch(r"[$€£]?[-+]?\d[\d,.]*(?::\d+|%|\s*(?:percent|percentage))?", answer):
         return "number"
     if re.fullmatch(r"\d{1,2}:\d{2}\s*[ap]m", answer):
         return "time"
@@ -161,9 +174,7 @@ def _usable_gui_target(
     area = (x2 - x1) * (y2 - y1)
     if area <= 0 or width <= 0 or height <= 0 or area > width * height * 0.9:
         return False
-    overlap = max(0.0, min(x2, width) - max(x1, 0.0)) * max(
-        0.0, min(y2, height) - max(y1, 0.0)
-    )
+    overlap = max(0.0, min(x2, width) - max(x1, 0.0)) * max(0.0, min(y2, height) - max(y1, 0.0))
     return overlap / area >= 0.5
 
 
@@ -759,9 +770,7 @@ def normalize_android_control(data_root: Path, destination: Path) -> int:
                         from PIL import Image
 
                         with Image.open(io.BytesIO(bytes(screenshots[step]))) as screenshot_image:
-                            if not _usable_gui_target(
-                                candidates, target_id, screenshot_image.size
-                            ):
+                            if not _usable_gui_target(candidates, target_id, screenshot_image.size):
                                 continue
                     image_path = image_root / f"{episode_id}-{step:04d}.png"
                     if not image_path.exists():
@@ -1000,9 +1009,9 @@ def normalize_textvqa(data_root: Path, destination: Path) -> int:
         {
             "split": item["canonical_split"],
             "question": item["question"],
-            "answer": Counter(
-                normalize_answer(value) for value in item["answers"]
-            ).most_common(1)[0][0],
+            "answer": Counter(normalize_answer(value) for value in item["answers"]).most_common(1)[
+                0
+            ][0],
         }
         for item in rows
     ]

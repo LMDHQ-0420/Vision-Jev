@@ -16,11 +16,8 @@ data/raw/
 data/interim/
 data/processed/
 checkpoints/
-artifacts/*
-!artifacts/.gitkeep
-runs/*
-!runs/.gitkeep
-!runs/README.md
+release/
+runs/
 
 # Editors and OS
 .idea/

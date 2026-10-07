@@ -27,8 +27,7 @@ def validate(args: argparse.Namespace) -> int:
         config.examples,
         args.manifest,
         {
-            "0.8B": args.data_root
-            / "runs/qwen35-08b-rlcd-main-72k/evaluation-static-timed",
+            "0.8B": args.data_root / "runs/qwen35-08b-rlcd-main-72k/evaluation-static-timed",
             "9B": args.data_root / "runs/qwen35-9b-rlcd-main-72k/evaluation-static-timed",
         },
     )

@@ -4,7 +4,7 @@
   "evidence_status": "planned",
   "model_config": "configs/model/qwen35_08b.json",
   "data_config": "configs/data/pilot_12k.json",
-  "initial_adapter": "/mnt/sda1/sol_data/vision-jev/runs/qwen35-08b-sft-pilot-12k/checkpoint-last",
+  "initial_adapter": "/data/vision-jev/runs/qwen35-08b-sft-pilot-12k/checkpoint-last",
   "include_sources": ["koniq10k", "refcoco", "refcocog", "refcocoplus"],
   "seed": 42,
   "epochs": 2,

@@ -58,9 +58,7 @@ def test_threshold_selection_maximizes_eligible_coverage() -> None:
                 {"task_type": task, "confidence": 0.80, "correct": False},
             ]
         )
-    report = select_confidence_thresholds(
-        records, target_accuracy=1.0, minimum_accepted=2
-    )
+    report = select_confidence_thresholds(records, target_accuracy=1.0, minimum_accepted=2)
     for task in ("choice", "noul", "score"):
         assert report["by_task"][task]["threshold"] == 0.90
         assert report["by_task"][task]["coverage"] == 2 / 3
@@ -81,11 +79,7 @@ def test_source_threshold_reports_keep_sources_separate() -> None:
             "correct": False,
         },
     ]
-    thresholds = {
-        "by_task": {
-            task: {"threshold": 0.8} for task in ("choice", "noul", "score")
-        }
-    }
+    thresholds = {"by_task": {task: {"threshold": 0.8} for task in ("choice", "noul", "score")}}
     report = _source_threshold_reports(records, thresholds)
     assert report["minigrid"]["choice"]["accuracy"] == 1.0
     assert report["boxoban"]["choice"]["accuracy"] == 0.0

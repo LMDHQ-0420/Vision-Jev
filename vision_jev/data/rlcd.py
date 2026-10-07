@@ -173,9 +173,7 @@ def build_rlcd_manifest(
         task: sum(int(roles[role][task]) for role in evaluation_roles)
         for task in ("choice", "noul", "score")
     }
-    heaps: dict[
-        str, dict[str, dict[str, list[tuple[int, str, int, dict[str, Any]]]]]
-    ] = {
+    heaps: dict[str, dict[str, dict[str, list[tuple[int, str, int, dict[str, Any]]]]]] = {
         role: {task: defaultdict(list) for task in ("choice", "noul", "score")}
         for role in evaluation_roles
     }
@@ -288,9 +286,7 @@ def build_rlcd_manifest(
         for row in output_rows
         if row["decision_role"] == "train"
     }
-    sft_train_roots = {
-        str(row.get("root_id", row["sample_id"])) for row in sft_train_rows
-    }
+    sft_train_roots = {str(row.get("root_id", row["sample_id"])) for row in sft_train_rows}
     roles_by_group: dict[str, set[str]] = defaultdict(set)
     for row in output_rows:
         roles_by_group[str(row["group_id"])].add(str(row["decision_role"]))
@@ -318,8 +314,7 @@ def build_rlcd_manifest(
         "groups": validation.groups,
         "roles": dict(sorted(role_counts.items())),
         "role_tasks": {
-            role: dict(sorted(counts.items()))
-            for role, counts in sorted(role_task_counts.items())
+            role: dict(sorted(counts.items())) for role, counts in sorted(role_task_counts.items())
         },
         "role_sources": {
             role: dict(sorted(counts.items()))
@@ -366,9 +361,10 @@ def build_rlcd_training_views(
     temporary = destination.with_suffix(destination.suffix + ".tmp")
     roots = 0
     view_counts: Counter[str] = Counter()
-    with base_manifest.open(encoding="utf-8") as source, temporary.open(
-        "w", encoding="utf-8"
-    ) as output:
+    with (
+        base_manifest.open(encoding="utf-8") as source,
+        temporary.open("w", encoding="utf-8") as output,
+    ):
         for raw in source:
             if not raw.strip():
                 continue

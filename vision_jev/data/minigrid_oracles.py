@@ -175,8 +175,7 @@ def _tool_transition(world: ToolWorld, state: ToolState, action: int) -> tuple[T
     front_object = by_position.get(front)
     if action == 2:
         blocked = front in world.walls or (
-            front_object is not None
-            and not (front_object[2] == "door" and front_object[4] == 0)
+            front_object is not None and not (front_object[2] == "door" and front_object[4] == 0)
         )
         if blocked:
             return state, False
@@ -220,8 +219,7 @@ def _tool_transition(world: ToolWorld, state: ToolState, action: int) -> tuple[T
             next_door_state = 1
         successor_objects = tuple(
             sorted(
-                (item if item != front_object else (*item[:4], next_door_state))
-                for item in objects
+                (item if item != front_object else (*item[:4], next_door_state)) for item in objects
             )
         )
         successor = (position, direction, carrying, successor_objects)
@@ -450,9 +448,7 @@ def _solve_seed(job: tuple[str, int, str]) -> OracleResult:
 def _allocated(values: list[str], seed: str) -> list[str]:
     return [
         item[1]
-        for item in sorted(
-            enumerate(values), key=lambda item: _rank(seed, f"{item[0]}:{item[1]}")
-        )
+        for item in sorted(enumerate(values), key=lambda item: _rank(seed, f"{item[0]}:{item[1]}"))
     ]
 
 
@@ -572,9 +568,7 @@ def _row_from_result(
             "oracle_q_coverage": "all_optimal_actions_exact_nonoptimal_actions_not_expanded",
             "candidate_action": candidate_action,
             "remaining_horizon": result.shortest_distance,
-            "value_target": max(
-                0.0, 1.0 - 0.9 * result.shortest_distance / result.max_steps
-            ),
+            "value_target": max(0.0, 1.0 - 0.9 * result.shortest_distance / result.max_steps),
             "explored_states": result.explored_states,
             "oracle_verified": True,
             "terminal_condition": "positive_environment_reward",

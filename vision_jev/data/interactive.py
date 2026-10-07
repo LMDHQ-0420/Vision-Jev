@@ -57,9 +57,7 @@ def _parse_boxoban_file(path: Path, root: Path) -> Iterator[dict[str, Any]]:
     parts = relative.parts
     difficulty = parts[0]
     upstream_split = parts[1] if len(parts) == 3 else "hard"
-    role_hint = {"train": "train", "valid": "dev", "test": "test", "hard": "test"}[
-        upstream_split
-    ]
+    role_hint = {"train": "train", "valid": "dev", "test": "test", "hard": "test"}[upstream_split]
     current_number: int | None = None
     grid: list[str] = []
 
@@ -152,9 +150,7 @@ def build_boxoban_index(
                 heapq.heapreplace(heap, candidate)
 
     shortfalls = {
-        key: quotas[key] - len(selected[key])
-        for key in quotas
-        if len(selected[key]) < quotas[key]
+        key: quotas[key] - len(selected[key]) for key in quotas if len(selected[key]) < quotas[key]
     }
     if shortfalls:
         raise ValueError(f"Boxoban selection shortfalls: {shortfalls}")
@@ -204,9 +200,7 @@ def prepare_interactive_assets(
         )
 
     roots = {
-        source_id: _single_directory(
-            data_root / "raw" / source_id / "extracted" / "repository"
-        )
+        source_id: _single_directory(data_root / "raw" / source_id / "extracted" / "repository")
         for source_id in sorted(expected)
     }
     required = {

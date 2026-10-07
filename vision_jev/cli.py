@@ -366,25 +366,19 @@ def build_parser() -> argparse.ArgumentParser:
     finish_parser.add_argument("--summary", required=True)
     finish_parser.set_defaults(func=finish_run)
     download_parser = sub.add_parser("data-download", help="download fixed dataset artifacts")
-    download_parser.add_argument(
-        "--data-root", type=Path, default=Path("/data/vision-jev")
-    )
+    download_parser.add_argument("--data-root", type=Path, default=Path("/data/vision-jev"))
     download_parser.add_argument("--catalog", type=Path, default=Path("configs/data/sources.json"))
     download_parser.add_argument("--source", action="append")
     download_parser.add_argument("--no-extract", action="store_true")
     download_parser.set_defaults(func=data_download)
     inventory_parser = sub.add_parser("data-inventory", help="show downloaded dataset state")
-    inventory_parser.add_argument(
-        "--data-root", type=Path, default=Path("/data/vision-jev")
-    )
+    inventory_parser.add_argument("--data-root", type=Path, default=Path("/data/vision-jev"))
     inventory_parser.set_defaults(func=data_inventory)
     weblinx_parser = sub.add_parser(
         "data-download-weblinx-subset",
         help="materialize a deterministic train-only WebLINX screenshot subset",
     )
-    weblinx_parser.add_argument(
-        "--data-root", type=Path, default=Path("/data/vision-jev")
-    )
+    weblinx_parser.add_argument("--data-root", type=Path, default=Path("/data/vision-jev"))
     weblinx_parser.add_argument("--target-rows", type=int, default=7000)
     weblinx_parser.add_argument("--seed", default="vision-jev-sft-v2")
     weblinx_parser.set_defaults(func=data_download_weblinx_subset)
@@ -401,9 +395,7 @@ def build_parser() -> argparse.ArgumentParser:
         "data-prepare-interactive",
         help="validate pinned environments and index interactive level assets",
     )
-    interactive_parser.add_argument(
-        "--data-root", type=Path, default=Path("/data/vision-jev")
-    )
+    interactive_parser.add_argument("--data-root", type=Path, default=Path("/data/vision-jev"))
     interactive_parser.add_argument(
         "--catalog", type=Path, default=Path("configs/data/sources.json")
     )
@@ -445,24 +437,18 @@ def build_parser() -> argparse.ArgumentParser:
     finalize_parser = sub.add_parser(
         "data-finalize-interactive", help="merge and audit all pinned interactive stages"
     )
-    finalize_parser.add_argument(
-        "--data-root", type=Path, default=Path("/data/vision-jev")
-    )
+    finalize_parser.add_argument("--data-root", type=Path, default=Path("/data/vision-jev"))
     finalize_parser.add_argument("--output", type=Path)
     finalize_parser.set_defaults(func=data_finalize_interactive)
     normalize_parser = sub.add_parser("data-normalize", help="convert raw data to canonical JSONL")
     normalize_parser.add_argument("source", choices=sorted(ADAPTERS))
-    normalize_parser.add_argument(
-        "--data-root", type=Path, default=Path("/data/vision-jev")
-    )
+    normalize_parser.add_argument("--data-root", type=Path, default=Path("/data/vision-jev"))
     normalize_parser.add_argument("--output", type=Path)
     normalize_parser.set_defaults(func=data_normalize)
     build_parser = sub.add_parser(
         "data-build-public", help="build the configured public-data manifest or report shortages"
     )
-    build_parser.add_argument(
-        "--data-root", type=Path, default=Path("/data/vision-jev")
-    )
+    build_parser.add_argument("--data-root", type=Path, default=Path("/data/vision-jev"))
     build_parser.add_argument("--mixture", type=Path, default=Path("configs/data/sft_117k.json"))
     build_parser.add_argument(
         "--output",
@@ -492,12 +478,8 @@ def build_parser() -> argparse.ArgumentParser:
         "data-build-rlcd",
         help="freeze group-safe RLCD roots and deterministic train views",
     )
-    rlcd_parser.add_argument(
-        "--data-root", type=Path, default=Path("/data/vision-jev")
-    )
-    rlcd_parser.add_argument(
-        "--config", type=Path, default=Path("configs/data/rlcd_72k.json")
-    )
+    rlcd_parser.add_argument("--data-root", type=Path, default=Path("/data/vision-jev"))
+    rlcd_parser.add_argument("--config", type=Path, default=Path("configs/data/rlcd_72k.json"))
     rlcd_parser.add_argument("--sft-manifest", type=Path, action="append", required=True)
     rlcd_parser.add_argument("--output", type=Path, required=True)
     rlcd_parser.add_argument("--views-output", type=Path, required=True)
@@ -506,9 +488,7 @@ def build_parser() -> argparse.ArgumentParser:
         "model-prepare", help="download the pinned Qwen model snapshot explicitly"
     )
     model_parser.add_argument("--config", type=Path, default=Path("configs/model/qwen35_08b.json"))
-    model_parser.add_argument(
-        "--model-root", type=Path, default=Path("/data/vision-jev/models")
-    )
+    model_parser.add_argument("--model-root", type=Path, default=Path("/data/vision-jev/models"))
     model_parser.set_defaults(func=model_prepare)
     train_parser = sub.add_parser("train-sft", help="run answer-only multimodal Qwen SFT")
     train_parser.add_argument("--config", type=Path, required=True)
@@ -519,9 +499,7 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="resume adapter, optimizer, scheduler, RNG and data cursor from a checkpoint",
     )
-    train_parser.add_argument(
-        "--model-root", type=Path, default=Path("/data/vision-jev/models")
-    )
+    train_parser.add_argument("--model-root", type=Path, default=Path("/data/vision-jev/models"))
     train_parser.set_defaults(func=train_sft_command)
     eval_parser = sub.add_parser(
         "eval-sft", help="evaluate structured answers from a trained SFT adapter"
@@ -532,9 +510,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser.add_argument("--output", type=Path, required=True)
     eval_parser.add_argument("--maximum", type=int, default=0, help="0 evaluates every row")
     eval_parser.add_argument("--progress-every", type=int, default=25)
-    eval_parser.add_argument(
-        "--model-root", type=Path, default=Path("/data/vision-jev/models")
-    )
+    eval_parser.add_argument("--model-root", type=Path, default=Path("/data/vision-jev/models"))
     eval_parser.set_defaults(func=eval_sft_command)
     rlcd_train_parser = sub.add_parser(
         "train-rlcd", help="train calibrated decision heads on frozen SFT features"

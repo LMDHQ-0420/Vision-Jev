@@ -25,7 +25,21 @@ REQUIRED = [
     "docs/development/showcase.md",
     "docs/release/checklist.md",
     "data/schemas/sample.schema.json",
+    "results/static-rlcd-test.json",
 ]
+
+ROOT_READMES = {Path("README.md"), Path("README-zh.md")}
+PUBLISHED_DIRECTORIES = (
+    "asset",
+    "showcase",
+    "configs",
+    "data",
+    "docs",
+    "results",
+    "scripts",
+    "vision_jev",
+    "tests",
+)
 
 IGNORED_MARKDOWN_ROOTS = {
     ".git",
@@ -57,14 +71,19 @@ def main() -> int:
         relative = path.relative_to(ROOT)
         if any(part in IGNORED_MARKDOWN_ROOTS for part in relative.parts):
             continue
-        if relative == Path("README.md"):
+        if relative in ROOT_READMES:
             continue
         if path.name.lower().startswith("readme"):
             failures.append(f"only the repository root may contain a README: {relative}")
             continue
         if relative.parts[0] == "docs":
             continue
-        failures.append(f"Markdown must be README.md or live under docs/: {relative}")
+        failures.append(f"Markdown must be a root project README or live under docs/: {relative}")
+    for readme in sorted(ROOT_READMES):
+        text = (ROOT / readme).read_text(encoding="utf-8")
+        for directory in PUBLISHED_DIRECTORIES:
+            if f"{directory}/" not in text:
+                failures.append(f"repository layout missing {directory}/ in {readme}")
     if failures:
         print("\n".join(failures), file=sys.stderr)
         return 1

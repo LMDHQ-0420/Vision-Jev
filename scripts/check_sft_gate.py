@@ -11,8 +11,7 @@ from typing import Any
 
 def check_gate(summary: dict[str, Any], gate: dict[str, Any]) -> dict[str, Any]:
     checks = {
-        "syntax_valid_rate": summary["syntax_valid_rate"]
-        >= gate["minimum_syntax_valid_rate"],
+        "syntax_valid_rate": summary["syntax_valid_rate"] >= gate["minimum_syntax_valid_rate"],
         "exact_match": summary["exact_match"] >= gate["minimum_exact_match"],
         "score_within_one_accuracy": summary["by_task"]["score"]["within_one_accuracy"]
         >= gate["minimum_score_within_one_accuracy"],

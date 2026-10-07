@@ -109,9 +109,7 @@ def _evaluate(job: tuple[str, int]) -> dict[str, Any]:
     outcomes: dict[str, dict[str, int]] = {}
     mean_returns: dict[str, float] = {}
     for action, name in DYNAMIC_ACTIONS.items():
-        rollouts = [
-            _rollout(env, environment_id, seed, action, trial) for trial in range(TRIALS)
-        ]
+        rollouts = [_rollout(env, environment_id, seed, action, trial) for trial in range(TRIALS)]
         counts = Counter(item[0] for item in rollouts)
         outcomes[name] = {
             "successes": counts["success"],
@@ -195,8 +193,7 @@ def generate_dynamic_obstacles(
             image_path = image_root / f"dynamic-obstacles-{index:05d}.png"
             image_path.write_bytes(result["png"])
             options = [
-                {"id": name, "text": name.replace("_", " ")}
-                for name in DYNAMIC_ACTIONS.values()
+                {"id": name, "text": name.replace("_", " ")} for name in DYNAMIC_ACTIONS.values()
             ]
             sample_id = f"minigrid-dynamic-obstacles:{index:05d}"
             row = {
