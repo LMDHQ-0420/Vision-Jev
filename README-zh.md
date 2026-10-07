@@ -18,6 +18,20 @@ Vision-Jev 是一个面向**动态候选判断与行动**的开源视觉语言�
 
 同一套视觉表示还会连接独立的 policy/value 分支，用于闭环环境中的行动学习。Vision-Jev 重点解决可审计、可校准、可评测并能连接真实动作的视觉判断，而不是开放式聊天。
 
+## 冻结测试集展示
+
+### Vision-Jev-0.8B
+
+<p align="center"><img src="asset/demos/0.8b.gif" alt="Vision-Jev-0.8B：原始 Qwen3.5 与 Vision-Jev 冻结 RLCD 样例对比" width="900"></p>
+
+### Vision-Jev-9B
+
+<p align="center"><img src="asset/demos/9b.gif" alt="Vision-Jev-9B：原始 Qwen3.5 与 Vision-Jev 冻结 RLCD 样例对比" width="900"></p>
+
+每段动画都让原始 Qwen3.5 checkpoint 与 Vision-Jev 使用同一个冻结测试样本和候选集。类别预先确定；每个类别选择两套 Vision-Jev checkpoint 都回答正确、通过既定置信阈值且样本 ID 的 SHA-256 最小的样本，选择过程不使用基线预测。每张 GIF 会依次播放全部固定样例；两条进度条按照预热后 3 次推理耗时的中位数推进，并在对应模型完成时显示答案。
+
+覆盖能力：通用视觉问答、自然图像文本读取、图表推理、组合视觉推理、图示科学推理、证据充分性判断、有序视觉质量评估。
+
 ## 两个核心亮点
 
 ### 1. 训练一个开源 Vision-Jev
@@ -66,20 +80,6 @@ hf download LMDHQ-0420/vision-jev \
 ```
 
 [Hugging Face 模型卡](https://huggingface.co/LMDHQ-0420/vision-jev)提供发布目录和 PEFT 加载方式说明。
-
-## 冻结测试集展示
-
-每段动画都让原始 Qwen3.5 checkpoint 与 Vision-Jev 使用同一个冻结测试样本和候选集。类别预先确定; 每个类别选择两套 Vision-Jev checkpoint 都回答正确、通过既定置信阈值且样本 ID 的 SHA-256 最小的样本, 选择过程不使用基线预测。每张 GIF 会依次播放全部固定样例; 两条进度条按照预热后 3 次推理耗时的中位数推进, 并在对应模型完成时显示答案。
-
-覆盖能力: 通用视觉问答、自然图像文本读取、图表推理、组合视觉推理、图示科学推理、证据充分性判断、有序视觉质量评估。
-
-### 0.8B
-
-<p align="center"><img src="asset/demos/0.8b.gif" alt="0.8B: 原始 Qwen3.5 与 Vision-Jev 冻结 RLCD 样例对比" width="900"></p>
-
-### 9B
-
-<p align="center"><img src="asset/demos/9b.gif" alt="9B: 原始 Qwen3.5 与 Vision-Jev 冻结 RLCD 样例对比" width="900"></p>
 
 ## 静态 RLCD 结果
 

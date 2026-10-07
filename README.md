@@ -18,6 +18,20 @@ Vision-Jev is an open foundation project for **judging and acting over a dynamic
 
 The same visual representation is designed to support a separate policy/value branch for closed-loop interaction. Vision-Jev focuses on auditable, calibratable decisions rather than unconstrained chat.
 
+## Frozen test showcase
+
+### Vision-Jev-0.8B
+
+<p align="center"><img src="asset/demos/0.8b.gif" alt="Vision-Jev-0.8B: original Qwen3.5 versus Vision-Jev across frozen RLCD examples" width="900"></p>
+
+### Vision-Jev-9B
+
+<p align="center"><img src="asset/demos/9b.gif" alt="Vision-Jev-9B: original Qwen3.5 versus Vision-Jev across frozen RLCD examples" width="900"></p>
+
+Each animation uses one identical frozen test sample and candidate set for the original Qwen3.5 checkpoint and Vision-Jev. Categories were declared first. Within each category, the sample is the minimum SHA-256 sample ID for which both Vision-Jev checkpoints are correct and pass their already-frozen confidence threshold; baseline predictions were not used for selection. Each GIF cycles through every configured example. The two progress bars advance on the measured median of three post-warmup inference runs, then reveal each model's answer.
+
+Included capabilities: General visual question answering, Text reading in natural images, Chart reasoning, Compositional visual reasoning, Diagram-grounded science reasoning, Evidence sufficiency judgment, Ordered visual quality assessment.
+
 ## Two commitments
 
 ### Train an open Vision-Jev
@@ -66,20 +80,6 @@ hf download LMDHQ-0420/vision-jev \
 ```
 
 The [Hugging Face model card](https://huggingface.co/LMDHQ-0420/vision-jev) documents the release layout and PEFT loading path.
-
-## Frozen test showcase
-
-Each animation uses one identical frozen test sample and candidate set for the original Qwen3.5 checkpoint and Vision-Jev. Categories were declared first. Within each category, the sample is the minimum SHA-256 sample ID for which both Vision-Jev checkpoints are correct and pass their already-frozen confidence threshold; baseline predictions were not used for selection. Each GIF cycles through every configured example. The two progress bars advance on the measured median of three post-warmup inference runs, then reveal each model's answer.
-
-Included capabilities: General visual question answering, Text reading in natural images, Chart reasoning, Compositional visual reasoning, Diagram-grounded science reasoning, Evidence sufficiency judgment, Ordered visual quality assessment.
-
-### 0.8B
-
-<p align="center"><img src="asset/demos/0.8b.gif" alt="0.8B: original Qwen3.5 versus Vision-Jev across frozen RLCD examples" width="900"></p>
-
-### 9B
-
-<p align="center"><img src="asset/demos/9b.gif" alt="9B: original Qwen3.5 versus Vision-Jev across frozen RLCD examples" width="900"></p>
 
 ## Static RLCD results
 
