@@ -55,14 +55,14 @@ def _fit_image(path: str, size: tuple[int, int]) -> Image.Image:
         image = source.convert("RGB")
     rendered_size = tuple(_scaled(dimension) for dimension in size)
     target_width, target_height = rendered_size
-    scaled_height = round(image.height * target_width / image.width)
-    image = image.resize((target_width, scaled_height), Image.Resampling.LANCZOS)
+    scale = min(target_width / image.width, target_height / image.height)
+    fitted_size = round(image.width * scale), round(image.height * scale)
+    image = image.resize(fitted_size, Image.Resampling.LANCZOS)
     canvas = Image.new("RGB", rendered_size, "#ffffff")
-    if scaled_height <= target_height:
-        canvas.paste(image, (0, (target_height - scaled_height) // 2))
-    else:
-        top = (scaled_height - target_height) // 2
-        canvas.paste(image.crop((0, top, target_width, top + target_height)), (0, 0))
+    canvas.paste(
+        image,
+        ((target_width - image.width) // 2, (target_height - image.height) // 2),
+    )
     return canvas
 
 
