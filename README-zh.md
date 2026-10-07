@@ -45,6 +45,8 @@ Vision-Jev 将视觉理解引入 JEV-like 模型范式，并完整开放从数�
 
 原始 Qwen、完成 SFT 但未接入静态 RLCD 决策头的 checkpoint, 以及完整 Vision-Jev 均在同一份冻结的 12,000 题测试集上评测。以下汇总保留全部成功与失败样本, 因此不同阶段的原始准确率回退也会直接展示。原始 Qwen 与 SFT-only 生成不提供校准决策头概率, 因此接受集校准只对 Vision-Jev 报告。
 
+[下载完整机器可读测试报告](results/static-rlcd-test.json)，其中包含分任务、分数据集、校准、阈值、高置信错误和推理耗时结果。
+
 ### 0.8B 汇总
 
 | 训练阶段 | Choice | Noul | Score |

@@ -46,6 +46,8 @@ Included capabilities: General visual question answering, Text reading in natura
 
 Original Qwen, the completed SFT-only checkpoint, and Vision-Jev with its static RLCD decision heads are evaluated on the same complete frozen 12,000-question test split. These aggregate results include every success and failure, so raw-accuracy regressions between stages remain visible. Original Qwen and SFT-only generation do not provide calibrated decision-head probabilities, so accepted-set calibration is reported only for Vision-Jev.
 
+[Download the complete machine-readable test report](results/static-rlcd-test.json), including per-task, per-dataset, calibration, threshold, high-confidence-error, and latency results.
+
 ### 0.8B summary
 
 | Training stage | Choice | Noul | Score |
