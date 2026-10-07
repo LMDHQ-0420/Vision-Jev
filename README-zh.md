@@ -2,7 +2,8 @@
   <img src="asset/Vision-Jev.svg" alt="Vision-Jev" width="380">
   <h3>一个支持视觉的开源 JEV-like 模型</h3>
   <p>训练代码、数据配额、评测流程与模型权重，全流程开放。</p>
-  <p><a href="README.md">English</a> · <b>简体中文</b> · <a href="docs/index.md">项目文档</a> · <a href="LICENSE">Apache-2.0</a></p>
+  <p><a href="README.md">English</a> · <b>简体中文</b> · <a href="https://huggingface.co/LMDHQ-0420/vision-jev">模型权重</a> · <a href="docs/index.md">项目文档</a> · <a href="LICENSE">Apache-2.0</a></p>
+  <p><img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white"> <img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-2.7%2B-EE4C2C?logo=pytorch&logoColor=white"> <img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-2ea44f"> <img alt="Status" src="https://img.shields.io/badge/status-Models%20Released-2ea44f"></p>
 </div>
 
 ---

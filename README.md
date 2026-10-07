@@ -2,8 +2,8 @@
   <img src="asset/Vision-Jev.svg" alt="Vision-Jev" width="380">
   <h3>An open vision-enabled JEV-like model</h3>
   <p>Training code, data recipe, evaluation protocol, and weights — developed in the open.</p>
-  <p><b>English</b> · <a href="README-zh.md">简体中文</a> · <a href="docs/index.md">Documentation</a> · <a href="LICENSE">Apache-2.0</a></p>
-  <p><img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white"> <img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-2.7%2B-EE4C2C?logo=pytorch&logoColor=white"> <img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-2ea44f"> <img alt="Status" src="https://img.shields.io/badge/status-SFT%20Preview-2ea44f"></p>
+  <p><b>English</b> · <a href="README-zh.md">简体中文</a> · <a href="https://huggingface.co/LMDHQ-0420/vision-jev">Models</a> · <a href="docs/index.md">Documentation</a> · <a href="LICENSE">Apache-2.0</a></p>
+  <p><img alt="Python 3.11+" src="https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white"> <img alt="PyTorch" src="https://img.shields.io/badge/PyTorch-2.7%2B-EE4C2C?logo=pytorch&logoColor=white"> <img alt="License" src="https://img.shields.io/badge/License-Apache--2.0-2ea44f"> <img alt="Status" src="https://img.shields.io/badge/status-Models%20Released-2ea44f"></p>
 </div>
 
 ---
