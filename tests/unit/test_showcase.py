@@ -345,7 +345,7 @@ def test_render_static_comparison_creates_three_frame_gif(tmp_path: Path) -> Non
     assert report["trained"]["correct"] is True
     with Image.open(output) as gif:
         assert gif.n_frames == 3
-        assert gif.size == (1200, 820)
+        assert gif.size == (2400, 1640)
 
 
 def test_render_static_suite_uses_latency_progress_frames(tmp_path: Path) -> None:
